@@ -31,7 +31,7 @@ class CreateLayoutTables extends Migration
             $table->string('name');
             $table->string('component_name');
             $table->json('config_schema')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->uuid('created_by')->nullable();
             $table->string('category')->nullable();
             $table->string('thumbnail_url')->nullable();
             $table->string('version')->nullable();

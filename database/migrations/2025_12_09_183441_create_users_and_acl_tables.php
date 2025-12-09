@@ -26,7 +26,7 @@ class CreateUsersAndAclTables extends Migration
             $table->bigIncrements('id');
             $table->string('name')->unique();
             $table->boolean('is_hidden')->default(false);
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->uuid('created_by')->nullable();
             $table->timestamps();
 
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
