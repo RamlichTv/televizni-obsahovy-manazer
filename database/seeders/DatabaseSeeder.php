@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             ContentAndMetaSeeder::class,
             DefaultUserSeeder::class,
             EventTypesSeeder::class,
+            Miscellaneous::class,
         ]);
     }
 }
