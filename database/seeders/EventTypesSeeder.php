@@ -63,6 +63,8 @@ class EventTypesSeeder extends Seeder
             ['name' => 'role_deleted',  'severity' => $sev['critical']],
 
             ['name' => 'user_created', 'severity' => $sev['notice']],
+            ['name' => 'user_logged_in', 'severity' => $sev['info']],
+            ['name' => 'user_logged_out', 'severity' => $sev['info']],
             ['name' => 'user_edited',  'severity' => $sev['notice']],
             ['name' => 'user_deleted', 'severity' => $sev['critical']],
 
