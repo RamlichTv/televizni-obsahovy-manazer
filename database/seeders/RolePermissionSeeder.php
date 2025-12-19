@@ -32,6 +32,10 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'edit_profiles'],
             ['name' => 'delete_profiles'],
 
+            ['name' => 'create_module_category'],
+            ['name' => 'edit_module_category'],
+            ['name' => 'delete_module_category'],
+
             ['name' => 'create_modules'],
             ['name' => 'edit_modules'],
             ['name' => 'delete_modules'],

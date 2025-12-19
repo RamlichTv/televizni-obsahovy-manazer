@@ -43,6 +43,11 @@ class EventTypesSeeder extends Seeder
             ['name' => 'profile_edited',  'severity' => $sev['notice']],
             ['name' => 'profile_deleted', 'severity' => $sev['critical']],
 
+            // Module categories
+            ['name' => 'module_category_created', 'severity' => $sev['notice']],
+            ['name' => 'module_category_assigned',  'severity' => $sev['info']],
+            ['name' => 'module_category_deleted', 'severity' => $sev['warning']],
+
             // Modules
             ['name' => 'module_created', 'severity' => $sev['notice']],
             ['name' => 'module_edited',  'severity' => $sev['notice']],
