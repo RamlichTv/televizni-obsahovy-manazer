@@ -24,6 +24,14 @@ class CreateLayoutTables extends Migration
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
         });
 
+        // MODULE_CATEGORIES - categories for blade components
+        // ##########################################################
+        Schema::create('module_categories', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name');
+            $table->timestamps();
+        });
+
         // MODULES - catalog of blade components
         // ##########################################################
         Schema::create('modules', function (Blueprint $table) {
@@ -32,12 +40,13 @@ class CreateLayoutTables extends Migration
             $table->string('component_name');
             $table->json('config_schema')->nullable();
             $table->uuid('created_by')->nullable();
-            $table->string('category')->nullable();
+            $table->bigInteger('category');
             $table->string('thumbnail_url')->nullable();
             $table->string('version')->nullable();
             $table->timestamps();
 
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('category')->references('id')->on('module_categories')->onDelete('set null');
         });
 
         // PAGES - pages/slides belonging to profiles
