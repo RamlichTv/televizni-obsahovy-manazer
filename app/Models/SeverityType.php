@@ -3,8 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SeverityType extends Model
 {
-    //
+    protected $fillable = [];
+
+    public function eventTypes() : HasMany
+    {
+        return $this->hasMany(EventType::class, 'severity');
+    }
 }
