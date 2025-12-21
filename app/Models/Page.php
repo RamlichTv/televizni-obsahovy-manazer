@@ -20,4 +20,12 @@ class Page extends Model
     public function modules() : HasMany {
         return $this->hasMany(PageModule::class);
     }
+
+    public function rows() : HasMany {
+        return $this->hasMany(PageRow::class);
+    }
+
+    public function columns() : HasMany {
+        return $this->hasMany(PageColumn::class);
+    }
 }
