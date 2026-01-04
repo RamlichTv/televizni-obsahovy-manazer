@@ -18,6 +18,13 @@
         @method('patch')
 
         <div>
+            <x-input-label :value="__('Username')" />
+            <div class="mt-1 flex items-justify border border-gray-300 rounded-md shadow-sm">
+                <x-input-label class="mx-3 my-2 text-[1rem] justify-start block w-full" :value="old('username', $user->username)"/>
+            </div>
+        </div>
+
+        <div>
             <x-input-label for="name" :value="__('Name')" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
