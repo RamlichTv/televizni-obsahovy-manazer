@@ -37,9 +37,13 @@
     <script>
         window.addEventListener('load', () => {
             const loader = document.getElementById('loader')
+            const loading_screen = document.getElementById('loading-screen')
             if (loader) {
                 loader.classList.add('opacity-0')
-                setTimeout(() => loader.remove(), 300)
+                setTimeout(() => {
+                    loader.remove()
+                    loading_screen.remove()
+                }, 300)
             }
         })
     </script>
