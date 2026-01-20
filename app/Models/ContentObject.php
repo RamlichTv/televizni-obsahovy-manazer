@@ -40,4 +40,8 @@ class ContentObject extends Model
     public function tags() : BelongsToMany {
         return $this->belongsToMany(Tag::class, 'content_tags');
     }
+
+    public function status() : BelongsTo {
+        return $this->belongsTo(ContentStatus::class);
+    }
 }

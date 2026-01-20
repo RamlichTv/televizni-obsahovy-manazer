@@ -8,6 +8,14 @@ class CreateContentTables extends Migration
 {
     public function up() : void
     {
+        // CONTENT_STATUSES
+        // ##########################################################
+        Schema::create('content_statuses', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('name')->unique();
+        });
+
+
         // CONTENT_TYPES
         // ##########################################################
         Schema::create('content_types', function (Blueprint $table) {
@@ -34,13 +42,15 @@ class CreateContentTables extends Migration
             $table->unsignedBigInteger('type_id')->nullable(); // fk -> content_types
             $table->uuid('author_id')->nullable(); // fk -> users
             $table->text('description')->nullable();
+            $table->integer('priority')->default(0);
+            $table->integer('status_id')->nullable(); // fk -> content_statuses
+            $table->json('meta')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->timestamp('expires_at')->nullable();
-            $table->integer('priority')->default(0);
-            $table->json('meta')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('status_id')->references('id')->on('content_statuses')->onDelete('set null');
             $table->foreign('type_id')->references('id')->on('content_types')->onDelete('set null');
             $table->foreign('author_id')->references('id')->on('users')->onDelete('set null');
         });
@@ -74,6 +84,7 @@ class CreateContentTables extends Migration
 
     public function down() : void
     {
+        Schema::dropIfExists('content_statuses');
         Schema::dropIfExists('content_tags');
         Schema::dropIfExists('content_meta');
         Schema::dropIfExists('content_objects');
