@@ -34,7 +34,7 @@
  <g transform="matrix(.45776 0 0 .46142 -2.1643 -26.267)">
   <rect x="4.7279" y="79.29" width="156.39" height="91.807" ry="3.7065" fill="{{ $fill }}"/>
   <rect x="9.6066" y="84.23" width="146.63" height="81.927" ry="10.031" fill="#e9faff"/>
-  <g fill="{{ $fill  }}">
+  <g fill="{{ $fill }}">
    <rect x="18.067" y="91.458" width="53.668" height="67.613" ry="11.064"/>
    <rect transform="rotate(90)" x="91.458" y="-147.77" width="30.564" height="67.613" ry="11.064"/>
    <rect transform="rotate(90)" x="128.51" y="-147.77" width="30.564" height="67.613" ry="11.064"/>
@@ -46,6 +46,6 @@
    <path d="m110.7 137.43h53.739" display="none"/>
   </g>
  </g>
- <text transform="scale(.99602 1.004)" x="127.58052" y="49.873158" fill="{{ $fill }}" font-family="'iMWritingQuat Nerd Font Propo'" font-size="50.872px" stroke-linecap="round" stroke-linejoin="round" stroke-width=".70096" text-align="center" text-anchor="middle" style="line-height:1.4" xml:space="preserve"><tspan x="127.58052" y="49.873158" direction="rtl" font-family="'InputSansIta Nerd Font'" font-size="50.872px" font-weight="300" stroke-width=".70096">TOM</tspan></text>
+ <path transform="scale(.99602 1.004)" d="m83.738 49.873 4.671-33.391h-11.562l0.50872-3.6073h27.055l-0.50872 3.6073h-11.562l-4.671 33.391zm36.628 0.46247q-6.7521 0-9.7119-3.3298-2.9136-3.3298-1.9886-10.036l1.5724-11.007q0.92495-6.7984 4.8097-10.174 3.931-3.3761 10.683-3.3761 6.7058 0 9.5732 3.3761 2.9136 3.3761 1.9886 10.174l-1.5724 11.007q-0.92494 6.7059-4.7635 10.036-3.8385 3.3298-10.591 3.3298zm0.50872-3.6073q5.1797 0 7.677-2.2199 2.4974-2.2199 3.2373-7.3533l1.5724-11.377q0.73996-5.2259-1.1562-7.4921-1.8499-2.2661-7.0296-2.2661-5.2259 0-7.7695 2.2661-2.4974 2.2661-3.2373 7.4921l-1.5724 11.377q-0.73995 5.1334 1.1562 7.3533 1.8961 2.2199 7.1221 2.2199zm37.506-6.1046-6.1046-23.077-4.5322 32.327h-3.8848l5.1797-36.998h6.1971l6.4284 24.326 13.18-24.326h5.8734l-5.1797 36.998h-3.8848l4.5322-32.373-12.579 23.124z" direction="rtl" fill="{{ $fill }}" stroke-linecap="round" stroke-linejoin="round" stroke-width=".70096" aria-label="TOM"/>
 </svg>
 @endif
