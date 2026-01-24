@@ -15,6 +15,7 @@ class ContentAndMetaSeeder extends Seeder
             ['name' => 'unpublished'],
             ['name' => 'published'],
             ['name' => 'archived'],
+            ['name' => 'deleted'],
         ];
 
         $types = [
