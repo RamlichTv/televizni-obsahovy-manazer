@@ -47,13 +47,18 @@ class User extends Authenticatable
         return $this->hasMany(ContentObject::class);
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->roles->contains('name', 'Administrator');
+    }
+
     public function hasPermission(string $permission) : bool {
-        return $this->permissions()
-                    ->where('name', $permission)
-                    ->exists()
-                || $this->roles()
-                        ->whereHas('permissions', fn ($q) =>
-                        $q->where('name', $permission)
-                        )->exists();
+        if ($this->isAdmin())
+            return true;
+
+        if ($this->permissions->contains('name', $permission))
+            return true;
+
+        return $this->roles->flatMap->permissions->contains('name', $permission);
     }
 }
