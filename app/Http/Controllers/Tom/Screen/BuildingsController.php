@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Tom\Screen;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class BuildingController extends Controller
+class BuildingsController extends Controller
 {
     function store() 
     {
