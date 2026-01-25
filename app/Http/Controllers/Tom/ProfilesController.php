@@ -7,8 +7,7 @@ use Illuminate\View\View;
 
 class ProfilesController extends Controller
 {
-
     public function index() : View {
-        return view('profiles.index');
+        return view('services.profiles.index');
     }
 }

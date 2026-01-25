@@ -8,6 +8,6 @@ use Illuminate\View\View;
 class ScreensController extends Controller
 {
     public function index() : View {
-        return view('screens.index');
+        return view('services.screens.index');
     }
 }
