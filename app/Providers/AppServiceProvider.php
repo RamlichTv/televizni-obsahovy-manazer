@@ -23,5 +23,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function ($user, $permission) {
             return $user->hasPermission($permission) ? true : null;
         });
+
+        Gate::policy(\App\Models\ContentObject::class, \App\Policies\ContentObjectPolicy::class);
     }
 }
