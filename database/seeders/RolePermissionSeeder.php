@@ -22,9 +22,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'bypass_max_size'],
             ['name' => 'manage_archived'],
 
-            ['name' => 'create_content_types'],
-            ['name' => 'edit_content_types'],
-            ['name' => 'delete_content_types'],
+            ['name' => 'manage_content_types'],
 
             ['name' => 'manage_screens'],
 
@@ -32,16 +30,13 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'edit_profiles'],
             ['name' => 'delete_profiles'],
 
-            ['name' => 'create_module_category'],
-            ['name' => 'edit_module_category'],
-            ['name' => 'delete_module_category'],
-
             ['name' => 'create_modules'],
             ['name' => 'edit_modules'],
             ['name' => 'delete_modules'],
-
-            ['name' => 'create_tags'],
-            ['name' => 'delete_tags'],
+            
+            ['name' => 'manage_module_categories'],
+            
+            ['name' => 'manage_tags'],
 
             ['name' => 'manage_acl'],
             ['name' => 'manage_users'],
