@@ -15,6 +15,7 @@ use App\Http\Controllers\Tom\ProfilesController;
 use App\Http\Controllers\Tom\Screen\BuildingsController;
 use App\Http\Controllers\Tom\Screen\RoomsController;
 use App\Http\Controllers\Tom\ScreensController;
+use App\Http\Controllers\Tom\UsersController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -177,6 +178,18 @@ Route::middleware('auth')->group(function () {
         Route::resource('categories', ModuleCategoriesController::class)
             ->only(['store', 'update', 'destroy'])
             ->middleware('can:manage_module_categories');
+    });
+
+    /* ## USER MANAGEMENT ROUTES */
+    Route::middleware('perms:manage_users,manage_acl')->group(function() {
+        Route::get('/users', [UsersController::class, 'index'])->name('users.index');
+        Route::get('/user/{user}/edit', [UsersController::class, 'edit'])->name('edit');
+        Route::patch('/user/{user}', [UsersController::class, 'update'])->name('update');
+    });
+    Route::middleware('can:manage_users')->prefix('user')->name('user.')->group(function() {
+        Route::post('/register', [RegisteredUserController::class, 'store']);
+        Route::get('/create', [UsersController::class, 'create'])->name('create');
+        Route::delete('/{user}', [UsersController::class, 'destroy'])->name('destroy');
     });
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
