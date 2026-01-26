@@ -9,6 +9,8 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Tom\Content\TagsController;
 use App\Http\Controllers\Tom\Content\ContentTypeController;
 use App\Http\Controllers\Tom\ContentController;
+use App\Http\Controllers\Tom\Module\ModuleCategoriesController;
+use App\Http\Controllers\Tom\ModulesController;
 use App\Http\Controllers\Tom\ProfilesController;
 use App\Http\Controllers\Tom\Screen\BuildingsController;
 use App\Http\Controllers\Tom\Screen\RoomsController;
@@ -147,6 +149,34 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{profile}', [ProfilesController::class, 'destroy'])
             ->middleware('can:delete,profile')
             ->name('destroy');
+    });
+
+    /* ## MODULE ROUTES ## */
+    Route::get('/modules', [ModulesController::class, 'index'])->name('modules.index');
+    Route::prefix('module')->name('module.')->group(function () {
+        Route::get('/create', [ModulesController::class, 'create'])
+            ->middleware('can:create_modules')
+            ->name('create');
+
+        Route::get('/{module}/edit', [ModulesController::class, 'edit'])
+            ->middleware('can:update,module')
+            ->name('edit');
+
+        Route::post('/', [ModulesController::class, 'store'])
+            ->middleware('can:create_modules')
+            ->name('store');
+
+        Route::patch('/{module}', [ModulesController::class, 'update'])
+            ->middleware('can:update,module')
+            ->name('update');
+
+        Route::delete('/{module}', [ModulesController::class, 'destroy'])
+            ->middleware('can:delete,module')
+            ->name('destroy');
+
+        Route::resource('categories', ModuleCategoriesController::class)
+            ->only(['store', 'update', 'destroy'])
+            ->middleware('can:manage_module_categories');
     });
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
