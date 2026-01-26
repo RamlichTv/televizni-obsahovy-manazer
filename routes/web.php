@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Tom\ScreensController;
 
 Route::get('/', fn () => redirect(route('dashboard')));
+
+Route::get('/screen/{screen}', [ScreensController::class, 'show'])->name('screen.show');
 
 require __DIR__.'/auth.php';

@@ -9,6 +9,9 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Tom\Content\TagsController;
 use App\Http\Controllers\Tom\Content\ContentTypeController;
 use App\Http\Controllers\Tom\ContentController;
+use App\Http\Controllers\Tom\Screen\BuildingsController;
+use App\Http\Controllers\Tom\Screen\RoomsController;
+use App\Http\Controllers\Tom\ScreensController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -78,6 +81,38 @@ Route::middleware('auth')->group(function () {
         Route::prefix('tags')->name('tags.')->middleware('can:manage_tags')->group(function() {
             Route::post('/', [TagsController::class, 'store'])->name('store');
             Route::delete('/{tag}', [TagsController::class, 'destroy'])->name('destroy');
+        });
+    });
+
+    /* ## SCREEN ROUTES ## */
+    Route::middleware('can:manage_screens')->group(function () {
+        Route::get('/screens', [ScreensController::class, 'index'])->name('screens.index');
+        
+        // ## Screens
+        Route::prefix('screen')->name('screen.')->group(function () {
+            Route::get('/create', [ScreensController::class, 'create'])->name('create');
+            Route::post('/', [ScreensController::class, 'store'])->name('store');
+
+            Route::get('/{screen}/edit', [ScreensController::class, 'edit'])->name('edit');
+            Route::patch('/{screen}', [ScreensController::class, 'update'])->name('update');
+
+            Route::delete('/{screen}', [ScreensController::class, 'destroy'])->name('destroy');
+        });
+
+        // ## Rooms
+        Route::get('/rooms', [RoomsController::class, 'index'])->name('rooms.index');
+        Route::prefix('room')->name('room.')->group(function () {
+            Route::post('/', [RoomsController::class, 'store'])->name('store');
+            Route::patch('/{room}', [RoomsController::class, 'update'])->name('update');
+            Route::delete('/{room}', [RoomsController::class, 'destroy'])->name('destroy');
+        });
+        
+        // ## Buildings
+        Route::get('/buildings', [BuildingsController::class, 'index'])->name('buildings.index');
+        Route::prefix('building')->name('building.')->group(function () {
+            Route::post('/', [BuildingsController::class, 'store'])->name('store');
+            Route::patch('/{building}', [BuildingsController::class, 'update'])->name('update');
+            Route::delete('/{building}', [BuildingsController::class, 'destroy'])->name('destroy');
         });
     });
 
