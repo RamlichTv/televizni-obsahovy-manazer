@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventsController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Tom\Content\TagsController;
 use App\Http\Controllers\Tom\Content\ContentTypeController;
@@ -202,6 +203,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('/{role}', [RolesController::class, 'update'])->name('update');
         Route::delete('/{role}', [RolesController::class, 'destroy'])->name('destroy');
     });
+
+    /* ## EVENT ROUTES ## */
+    Route::get('/events', [EventsController::class, 'index'])->middleware('can:view_events')->name('events.index');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
