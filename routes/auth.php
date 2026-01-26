@@ -9,6 +9,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Tom\Content\TagsController;
 use App\Http\Controllers\Tom\Content\ContentTypeController;
 use App\Http\Controllers\Tom\ContentController;
+use App\Http\Controllers\Tom\ProfilesController;
 use App\Http\Controllers\Tom\Screen\BuildingsController;
 use App\Http\Controllers\Tom\Screen\RoomsController;
 use App\Http\Controllers\Tom\ScreensController;
@@ -114,6 +115,38 @@ Route::middleware('auth')->group(function () {
             Route::patch('/{building}', [BuildingsController::class, 'update'])->name('update');
             Route::delete('/{building}', [BuildingsController::class, 'destroy'])->name('destroy');
         });
+    });
+
+    /* ## PROFILE ROUTES ## */    
+    Route::get('/profiles', [ProfilesController::class, 'index'])
+        ->middleware('perms:create_profiles,edit_profiles,delete_profiles')
+        ->name('profiles.index');
+    Route::prefix('profile')->name('profile.')->group(function () {
+        // ## Viewing
+        Route::get('/{profile}', [ProfilesController::class, 'show'])
+            ->middleware('perms:create_profiles,edit_profiles,delete_profiles')
+            ->name('show');
+
+        // ## Creating
+        Route::get('/create', [ProfilesController::class, 'create'])
+            ->middleware('can:create_profiles')
+            ->name('create');
+        Route::post('/', [ProfilesController::class, 'store'])
+            ->middleware('can:create_profiles')
+            ->name('store');
+        
+        // ## Editing
+        Route::get('/{profile}/edit', [ProfilesController::class, 'edit'])
+            ->middleware('can:update,profile')
+            ->name('edit');
+        Route::patch('/{profile}', [ProfilesController::class, 'update'])
+            ->middleware('can:update,profile')
+            ->name('update');
+        
+        // ## Deleting
+        Route::delete('/{profile}', [ProfilesController::class, 'destroy'])
+            ->middleware('can:delete,profile')
+            ->name('destroy');
     });
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
