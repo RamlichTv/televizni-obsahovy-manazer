@@ -12,6 +12,7 @@ use App\Http\Controllers\Tom\ContentController;
 use App\Http\Controllers\Tom\Module\ModuleCategoriesController;
 use App\Http\Controllers\Tom\ModulesController;
 use App\Http\Controllers\Tom\ProfilesController;
+use App\Http\Controllers\Tom\RolesController;
 use App\Http\Controllers\Tom\Screen\BuildingsController;
 use App\Http\Controllers\Tom\Screen\RoomsController;
 use App\Http\Controllers\Tom\ScreensController;
@@ -190,6 +191,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/register', [RegisteredUserController::class, 'store']);
         Route::get('/create', [UsersController::class, 'create'])->name('create');
         Route::delete('/{user}', [UsersController::class, 'destroy'])->name('destroy');
+    });
+
+    /* ## ROLE MANAGEMENT ROUTES */
+    Route::get('/roles', [RolesController::class, 'index'])->middleware('can:manage_acl')->name('roles.index');
+    Route::middleware('can:manage_acl')->prefix('role')->name('role.')->group(function() {
+        Route::get('/create', [RolesController::class, 'create'])->name('create');
+        Route::get('/{role}/edit', [RolesController::class, 'edit'])->name('edit');
+        Route::post('/', [RolesController::class, 'store'])->name('store');
+        Route::patch('/{role}', [RolesController::class, 'update'])->name('update');
+        Route::delete('/{role}', [RolesController::class, 'destroy'])->name('destroy');
     });
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
