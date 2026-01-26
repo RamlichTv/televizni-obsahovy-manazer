@@ -11,7 +11,7 @@ class CreateContentTables extends Migration
         // CONTENT_STATUSES
         // ##########################################################
         Schema::create('content_statuses', function (Blueprint $table) {
-            $table->increments('id');
+            $table->increments('id')->primary();
             $table->string('name')->unique();
         });
 
@@ -43,7 +43,7 @@ class CreateContentTables extends Migration
             $table->uuid('author_id')->nullable(); // fk -> users
             $table->text('description')->nullable();
             $table->integer('priority')->default(0);
-            $table->integer('status_id')->nullable(); // fk -> content_statuses
+            $table->unsignedInteger('status_id')->nullable(); // fk -> content_statuses
             $table->json('meta')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->timestamp('expires_at')->nullable();
