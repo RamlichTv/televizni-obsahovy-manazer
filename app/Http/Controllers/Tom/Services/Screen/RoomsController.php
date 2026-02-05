@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tom\Screen;
+namespace App\Http\Controllers\Tom\Services\Screen;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

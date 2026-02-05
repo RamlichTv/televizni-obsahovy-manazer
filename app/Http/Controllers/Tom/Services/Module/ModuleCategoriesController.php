@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tom\Module;
+namespace App\Http\Controllers\Tom\Services\Module;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

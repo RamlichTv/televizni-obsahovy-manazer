@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Tom;
+
+use App\Http\Controllers\Controller;
 
 class DashboardController extends Controller
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Tom;
+namespace App\Http\Controllers\Tom\Services;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;

@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Tom;
 
-use App\Http\Requests\SettingsUpdateRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Tom\SettingsUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Tom\ScreensController;
+use App\Http\Controllers\Tom\Services\ScreensController;
 
 Route::get('/', fn () => redirect(route('dashboard')));
 

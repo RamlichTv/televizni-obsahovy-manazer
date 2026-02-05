@@ -4,20 +4,20 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PasswordController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\EventsController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\Tom\Content\TagsController;
-use App\Http\Controllers\Tom\Content\ContentTypeController;
-use App\Http\Controllers\Tom\ContentController;
-use App\Http\Controllers\Tom\Module\ModuleCategoriesController;
-use App\Http\Controllers\Tom\ModulesController;
-use App\Http\Controllers\Tom\ProfilesController;
-use App\Http\Controllers\Tom\RolesController;
-use App\Http\Controllers\Tom\Screen\BuildingsController;
-use App\Http\Controllers\Tom\Screen\RoomsController;
-use App\Http\Controllers\Tom\ScreensController;
-use App\Http\Controllers\Tom\UsersController;
+use App\Http\Controllers\Tom\DashboardController;
+use App\Http\Controllers\Tom\EventsController;
+use App\Http\Controllers\Tom\SettingsController;
+use App\Http\Controllers\Tom\Services\Content\TagsController;
+use App\Http\Controllers\Tom\Services\Content\ContentTypeController;
+use App\Http\Controllers\Tom\Services\ContentController;
+use App\Http\Controllers\Tom\Services\Module\ModuleCategoriesController;
+use App\Http\Controllers\Tom\Services\ModulesController;
+use App\Http\Controllers\Tom\Services\ProfilesController;
+use App\Http\Controllers\Tom\Services\RolesController;
+use App\Http\Controllers\Tom\Services\Screen\BuildingsController;
+use App\Http\Controllers\Tom\Services\Screen\RoomsController;
+use App\Http\Controllers\Tom\Services\ScreensController;
+use App\Http\Controllers\Tom\Services\UsersController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -38,8 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
     /* ## CONTENT ROUTES ## */
-    Route::name('content.')->prefix('content')
-        ->group(function () {
+    Route::name('content.')->prefix('content')->group(function () {
 
         // ## Viewing
         Route::get('/', [ContentController::class, 'index'])
