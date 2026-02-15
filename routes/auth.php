@@ -62,6 +62,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/deleted', [ContentController::class, 'deleted'])
             ->middleware('can:admin')
             ->name('deleted');
+            
+        Route::get('/{content_object}', [ContentController::class, 'show'])
+            ->whereUuid('content_object')
+            ->withTrashed()
+            ->name('show');
 
         // ## Creating
         Route::middleware('can:create_content')->group(function() {
@@ -228,7 +233,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{role}', [RolesController::class, 'destroy'])->name('destroy');
     });
 
-    /* ## EVENT ROUTES ## */
+    /* ## EVENT ROUTE ## */
     Route::get('/events', [EventsController::class, 'index'])->middleware('can:view_events')->name('events.index');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
