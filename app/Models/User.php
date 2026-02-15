@@ -21,6 +21,7 @@ class User extends Authenticatable
         'email',
         'password',
         'name',
+        'avatar',
     ];
 
     protected static function booted() : void {
