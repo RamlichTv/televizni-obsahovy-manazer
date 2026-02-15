@@ -98,12 +98,20 @@ Route::middleware('auth')->group(function () {
             ->middleware('can:publish_content')
             ->whereUuid('content_object')
             ->name('publish');
+        Route::patch('/{content_object}/unpublish', [ContentController::class, 'unpublish'])
+            ->middleware('can:publish_content')
+            ->whereUuid('content_object')
+            ->name('unpublish');
 
         // ## Archiving
         Route::patch('/{content_object}/archive', [ContentController::class, 'archive'])
             ->middleware('can:manage_archived')
             ->whereUuid('content_object')
             ->name('archive');
+        Route::patch('/{content_object}/unarchive', [ContentController::class, 'unarchive'])
+            ->middleware('can:manage_archived')
+            ->whereUuid('content_object')
+            ->name('unarchive');
 
         // ## Content Types
         Route::middleware('can:manage_content_types')->prefix('types')->name('types.')->group(function() {
