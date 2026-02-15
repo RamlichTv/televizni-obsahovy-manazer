@@ -13,7 +13,6 @@ class CreateEventsTables extends Migration
         Schema::create('severity_types', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->unique();
-            $table->timestamps();
         });
 
         // event_types
@@ -22,7 +21,6 @@ class CreateEventsTables extends Migration
             $table->bigIncrements('id');
             $table->string('name')->unique(); // content_added, tv_online, layout_changed...
             $table->unsignedBigInteger('severity')->nullable();
-            $table->timestamps();
 
             $table->foreign('severity')->references('id')->on('severity_types')->onDelete('set null');
         });

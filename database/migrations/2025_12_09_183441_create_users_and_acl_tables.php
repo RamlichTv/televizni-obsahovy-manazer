@@ -37,7 +37,6 @@ class CreateUsersAndAclTables extends Migration
         Schema::create('permissions', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->unique();
-            $table->timestamps();
         });
 
         // role_permissions

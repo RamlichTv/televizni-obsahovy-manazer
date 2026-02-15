@@ -11,7 +11,7 @@ class CreateContentTables extends Migration
         // CONTENT_STATUSES
         // ##########################################################
         Schema::create('content_statuses', function (Blueprint $table) {
-            $table->increments('id')->primary();
+            $table->increments('id');
             $table->string('name')->unique();
         });
 

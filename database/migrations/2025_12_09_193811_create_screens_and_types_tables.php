@@ -19,9 +19,8 @@ class CreateScreensAndTypesTables extends Migration
         // orientation_types
         // ##########################################################
         Schema::create('orientation_types', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->tinyIncrements('id');
             $table->string('name')->unique();
-            $table->timestamps();
         });
 
         // buildings
@@ -54,7 +53,7 @@ class CreateScreensAndTypesTables extends Migration
             $table->integer('width')->nullable();
             $table->uuid('profile_id')->nullable();
             $table->unsignedBigInteger('status_id')->nullable();
-            $table->unsignedBigInteger('orientation_id')->nullable();
+            $table->unsignedTinyInteger('orientation_id')->nullable();
             $table->string('hardware_id')->nullable()->unique();
             $table->unsignedBigInteger('room_id')->nullable();
             $table->text('description')->nullable();
