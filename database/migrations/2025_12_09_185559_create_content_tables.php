@@ -48,6 +48,7 @@ class CreateContentTables extends Migration
             $table->json('meta')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->timestamp('expires_at')->nullable();
+            $table->timestamp('archived_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

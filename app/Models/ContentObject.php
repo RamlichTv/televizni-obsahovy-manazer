@@ -28,12 +28,14 @@ class ContentObject extends Model
         'meta',
         'published_at',
         'expires_at',
+        'archived_at'
     ];
 
     protected $casts = [
         'meta' => 'array',
         'expires_at' => 'datetime',
         'published_at' => 'datetime',
+        'archived_at' => 'datetime'
     ];
 
     protected static function booted() : void {
