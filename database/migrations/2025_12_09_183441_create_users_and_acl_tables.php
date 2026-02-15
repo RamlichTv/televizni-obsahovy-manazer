@@ -3,11 +3,21 @@
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Storage;
 
 class CreateUsersAndAclTables extends Migration
 {
     public function up() : void
     {
+        if (Storage::disk('public')->exists('users')) {
+            $directories = Storage::disk('public')->directories('users');
+            foreach ($directories as $dir) {
+                if (basename($dir) !== 'default') {
+                    Storage::disk('public')->deleteDirectory($dir);
+                }
+            }
+        }
+        
         // USERS (UUID)
         // ##################################################
         Schema::create('users', function (Blueprint $table) {
@@ -89,5 +99,14 @@ class CreateUsersAndAclTables extends Migration
         Schema::dropIfExists('permissions');
         Schema::dropIfExists('roles');
         Schema::dropIfExists('users');
+
+        if (Storage::disk('public')->exists('users')) {
+            $directories = Storage::disk('public')->directories('users');
+            foreach ($directories as $dir) {
+                if (basename($dir) !== 'default') {
+                    Storage::disk('public')->deleteDirectory($dir);
+                }
+            }
+        }
     }
 }
