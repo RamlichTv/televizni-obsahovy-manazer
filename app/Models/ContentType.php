@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ContentType extends Model
 {
     protected $fillable = [
         'name',
+        'is_file',
         'extension_whitelist',
         'max_size',
     ];
@@ -17,7 +18,7 @@ class ContentType extends Model
         'extension_whitelist' => 'array',
     ];
 
-    public function contents() : HasMany {
-        return $this->hasMany(ContentObject::class);
+    public function content_objects() : HasOne {
+        return $this->hasOne(ContentObject::class, 'type_id');
     }
 }

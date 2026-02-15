@@ -21,8 +21,9 @@ class CreateContentTables extends Migration
         Schema::create('content_types', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->unique();
+            $table->boolean('is_file')->default(false);
             $table->json('extension_whitelist')->nullable();
-            $table->bigInteger('max_size')->nullable(); // bytes
+            $table->bigInteger('max_size')->nullable(); // MB
             $table->timestamps();
         });
 

@@ -19,10 +19,11 @@ class ContentAndMetaSeeder extends Seeder
         ];
 
         $types = [
-            ['name' => 'photo',    'extension_whitelist' => json_encode(['jpg','jpeg','png','gif']), 'max_size' => 5 * $MB],
-            ['name' => 'poster',   'extension_whitelist' => json_encode(['jpg','jpeg','png','svg']), 'max_size' => 5 * $MB],
-            ['name' => 'video',    'extension_whitelist' => json_encode(['mp4','webm','mov']), 'max_size' => 100 * $MB],
-            ['name' => 'document', 'extension_whitelist' => json_encode(['pdf']), 'max_size' => 10 * $MB],
+            ['name' => 'Photo',    'extension_whitelist' => json_encode(['jpg','jpeg','png','gif']), 'max_size' => 5 * $MB, 'is_file' => true],
+            ['name' => 'Poster',   'extension_whitelist' => json_encode(['jpg','jpeg','png','svg']), 'max_size' => 5 * $MB, 'is_file' => true],
+            ['name' => 'Video',    'extension_whitelist' => json_encode(['mp4','webm','mov']), 'max_size' => 100 * $MB, 'is_file' => true],
+            ['name' => 'Document', 'extension_whitelist' => json_encode(['pdf']), 'max_size' => 10 * $MB, 'is_file' => true],
+            ['name' => 'Text',     'extension_whitelist' => null, 'max_size' => null, 'is_file' => false],
         ];
 
         $tags = [
