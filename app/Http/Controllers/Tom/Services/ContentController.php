@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tom\Services\ContentObjectRequest;
 use App\Models\ContentObject;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\View\View;
 
 class ContentController extends Controller
@@ -116,7 +117,7 @@ class ContentController extends Controller
             $content->tags()->sync($request->input('tags'));
         }
         
-        return redirect()->route('content.edit', ['content_object' => $content])
+        return redirect()->route('content.show', ['content_object' => $content])
                          ->with('success', 'Content created successfully.');
     }
 
@@ -131,6 +132,8 @@ class ContentController extends Controller
     }
 
     function update(Request $request, ContentObject $content_object) {
+        $contentType = $content_object->type;
+
         // Validation (similar to create, but file is nullable)
         $request->validate([
             'name' => 'required|string|max:255',
@@ -139,7 +142,30 @@ class ContentController extends Controller
             'expires_at' => ['nullable', 'date', 'after:today'],
             'tags' => 'array',
             'tags.*' => 'exists:tags,id',
-            'file_upload' => 'nullable|file',
+            'file_upload' => [
+                'nullable',
+                'file',
+                function ($attribute, $value, $fail) use ($request, $contentType) {
+                    if (!$contentType || !$contentType->is_file) {
+                        return;
+                    }
+
+                    $allowed = collect((array) ($contentType->extension_whitelist ?? []))
+                        ->map(fn($rule) => strtolower(trim((string) $rule)))
+                        ->filter()
+                        ->values()
+                        ->all();
+
+                    if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
+                        $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
+                    }
+
+                    $maxSizeBytes = (int) ($contentType->max_size ?? 0);
+                    if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $request->user()->cannot('bypass_max_size')) {
+                        $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
+                    }
+                },
+            ],
         ]);
 
         // Update base data
@@ -175,13 +201,23 @@ class ContentController extends Controller
     }
 
     function publish(ContentObject $content_object) {
-        $content_object->update(['status_id' => 2]);
+        $content_object->update(['status_id' => 2, 'published_at' => date('Y-m-d H:i:s')]);
         return back()->with('success', 'Content published successfully.');
     }
 
+    function unpublish(ContentObject $content_object) {
+        $content_object->update(['status_id' => 1, 'published_at' => null]);
+        return back()->with('success', 'Content unpublished successfully.');
+    }
+
     function archive(ContentObject $content_object) {
-        $content_object->update(['status_id' => 3]);
+        $content_object->update(['status_id' => 3, 'archived_at' => date('Y-m-d H:i:s')]);
         return back()->with('success', 'Content archived successfully.');
+    }
+
+    function unarchive(ContentObject $content_object) {
+        $content_object->update(['status_id' => 2, 'archived_at' => null, 'expires_at' => null]);
+        return back()->with('success', 'Content unarchived successfully.');
     }
 
     function destroy(ContentObject $content_object) {
@@ -203,5 +239,43 @@ class ContentController extends Controller
             });
         }
         return $query;
+    }
+
+    private function fileMatchesAnyRule(UploadedFile $file, array $rules): bool
+    {
+        $mime = strtolower((string) $file->getMimeType());
+        $clientExtension = strtolower((string) $file->getClientOriginalExtension());
+        $guessedExtension = strtolower((string) $file->extension());
+
+        foreach ($rules as $rule) {
+            if (str_contains($rule, '/')) {
+                if ($this->mimeMatchesRule($mime, $rule)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            $normalizedExtension = ltrim($rule, '.');
+            if ($normalizedExtension !== '' &&
+                ($normalizedExtension === $clientExtension || $normalizedExtension === $guessedExtension)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function mimeMatchesRule(string $mime, string $rule): bool
+    {
+        if ($mime === '') {
+            return false;
+        }
+
+        if (str_ends_with($rule, '/*')) {
+            return str_starts_with($mime, rtrim($rule, '*'));
+        }
+
+        return $mime === $rule;
     }
 }

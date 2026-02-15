@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tom\Services;
 
 use App\Models\ContentType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 
 class ContentObjectRequest extends FormRequest
 {
@@ -36,24 +37,66 @@ class ContentObjectRequest extends FormRequest
                 'file',
                 function ($attribute, $value, $fail) {
                     $typeId = $this->input('type_id');
-                    $extension = $value->getClientOriginalExtension();
-                    
                     $contentType = ContentType::find($typeId);
-                    
-                    if (!$contentType) return;
 
-                    $allowed = $contentType->extension_whitelist ?? [];
-                    
-                    if (!in_array(strtolower($extension), $allowed)) {
-                        $fail("The {$attribute} must be a file of type: " . implode(', ', $allowed));
+                    if (!$contentType || !$contentType->is_file) {
+                        return;
                     }
-                    
-                    $maxSizeInKb = $contentType->max_size / 1024;
-                    if ($value->getSize() / 1024 > $maxSizeInKb && $this->user()->cannot('bypass_max_size')) {
-                         $fail("The file is too large. Max size allowed is " . round($maxSizeInKb / 1024, 2) . " MB.");
+
+                    $allowed = collect((array) ($contentType->extension_whitelist ?? []))
+                        ->map(fn($rule) => strtolower(trim((string) $rule)))
+                        ->filter()
+                        ->values()
+                        ->all();
+
+                    if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
+                        $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
+                    }
+
+                    $maxSizeBytes = (int) ($contentType->max_size ?? 0);
+                    if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $this->user()->cannot('bypass_max_size')) {
+                        $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
                     }
                 },
             ],
         ];
+    }
+
+    private function fileMatchesAnyRule(UploadedFile $file, array $rules): bool
+    {
+        $mime = strtolower((string) $file->getMimeType());
+        $clientExtension = strtolower((string) $file->getClientOriginalExtension());
+        $guessedExtension = strtolower((string) $file->extension());
+
+        foreach ($rules as $rule) {
+            if (str_contains($rule, '/')) {
+                if ($this->mimeMatchesRule($mime, $rule)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            $normalizedExtension = ltrim($rule, '.');
+            if ($normalizedExtension !== '' &&
+                ($normalizedExtension === $clientExtension || $normalizedExtension === $guessedExtension)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function mimeMatchesRule(string $mime, string $rule): bool
+    {
+        if ($mime === '') {
+            return false;
+        }
+
+        if (str_ends_with($rule, '/*')) {
+            return str_starts_with($mime, rtrim($rule, '*'));
+        }
+
+        return $mime === $rule;
     }
 }
