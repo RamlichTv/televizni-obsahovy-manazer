@@ -45,34 +45,59 @@ Route::middleware('auth')->group(function () {
         // ## Viewing
         Route::get('/', [ContentController::class, 'index'])
             ->name('index');
-        Route::get('/{content_object}', [ContentController::class, 'show'])
-            ->name('show');
+
+        Route::get('/manage', [ContentController::class, 'manage'])
+            ->name('manage');
+
+        Route::get('/unpublished', [ContentController::class, 'unpublished'])
+            ->middleware('can:publish_content')
+            ->name('unpublished');
+
+        Route::get('/library', [ContentController::class, 'library'])
+            ->name('library');
+
+        Route::get('/archived', [ContentController::class, 'archived'])
+            ->name('archived');
+
+        Route::get('/deleted', [ContentController::class, 'deleted'])
+            ->middleware('can:admin')
+            ->name('deleted');
 
         // ## Creating
         Route::middleware('can:create_content')->group(function() {
-            Route::get('/create', [ContentController::class, 'create'])->name('create');
-            Route::post('/', [ContentController::class, 'store'])->name('store');
+            Route::get('/create', [ContentController::class, 'create'])
+                ->name('create');
+            Route::post('/', [ContentController::class, 'store'])
+                ->name('store');
         });
 
         // ## Editing
         Route::middleware('can:update,content_object')->group(function() {
-            Route::get('/{content_object}/edit', [ContentController::class, 'edit'])->name('edit');
-            Route::patch('/{content_object}', [ContentController::class, 'update'])->name('update');
+            Route::get('/{content_object}/edit', [ContentController::class, 'edit'])
+                ->whereUuid('content_object')
+                ->name('edit');
+                
+            Route::patch('/{content_object}/update', [ContentController::class, 'update'])
+                ->whereUuid('content_object')
+                ->name('update');
         });
 
         // ## Deleting
         Route::delete('/{content_object}', [ContentController::class, 'destroy'])
             ->middleware('can:delete,content_object')
+            ->whereUuid('content_object')
             ->name('destroy');
 
         // ## Publishing
         Route::patch('/{content_object}/publish', [ContentController::class, 'publish'])
             ->middleware('can:publish_content')
+            ->whereUuid('content_object')
             ->name('publish');
 
         // ## Archiving
         Route::patch('/{content_object}/archive', [ContentController::class, 'archive'])
             ->middleware('can:manage_archived')
+            ->whereUuid('content_object')
             ->name('archive');
 
         // ## Content Types
