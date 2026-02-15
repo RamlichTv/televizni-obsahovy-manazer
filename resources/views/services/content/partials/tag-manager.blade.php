@@ -1,5 +1,5 @@
 <div class="flex flex-col md:flex-row gap-6">
-    {{-- Seznam existujících tagů --}}
+    {{-- List of existing tags --}}
     <div class="flex-1">
         <h3 class="text-lg font-bold text-gray-700 mb-3">{{ __('Existing Tags') }}</h3>
         <div class="flex flex-wrap gap-2">
@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    {{-- Formulář pro přidání --}}
+    {{-- Form for adding a new tag --}}
     <div class="w-full md:w-1/3 border-l pl-6 border-gray-200">
         <h3 class="text-lg font-bold text-gray-700 mb-3">{{ __('Add New Tag') }}</h3>
         <form action="{{ route('content.tags.store') }}" method="POST" class="space-y-3">
