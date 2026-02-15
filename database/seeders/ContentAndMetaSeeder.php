@@ -12,10 +12,10 @@ class ContentAndMetaSeeder extends Seeder
         $MB = pow(2, 20);
 
         $statuses = [
-            ['name' => 'unpublished'],
-            ['name' => 'published'],
-            ['name' => 'archived'],
-            ['name' => 'deleted'],
+            ['name' => 'Unpublished'],
+            ['name' => 'Published'],
+            ['name' => 'Archived'],
+            ['name' => 'Deleted'],
         ];
 
         $types = [
@@ -30,7 +30,10 @@ class ContentAndMetaSeeder extends Seeder
             ['name' => 'announcement'],
             ['name' => 'event'],
             ['name' => 'sports'],
-            ['name' => 'music'],
+            ['name' => 'competition'],
+            ['name' => 'news'],
+            ['name' => 'report'],
+            ['name' => 'promotional'],
         ];
 
         DB::table('content_statuses')->insert($statuses);
