@@ -36,6 +36,6 @@ class ContentObjectPolicy
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, ContentObject $contentObject): bool {
-        return $user->hasPermission('delete_content');
+        return $user->hasPermission('delete_content') || $user->id === $contentObject->author_id;
     }
 }
