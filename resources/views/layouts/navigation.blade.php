@@ -13,7 +13,7 @@
                 <!-- Navigation Links -->
                 <div class="hidden sm:-my-px grow sm:ms-10 sm:flex">
 
-                    @canany(['publish_content', 'edit_content', 'view_content', 'delete_content', 'manage_archived', 'manage_content_types', 'manage_tags'])
+                    @canany(['publish_content', 'edit_content', 'delete_content', 'manage_archived', 'manage_content_types', 'manage_tags'])
                     <x-nav-link :href="route('content.index')" :active="request()->routeIs('content.index')">
                         {{ __('Content') }}
                     </x-nav-link>
@@ -114,7 +114,7 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            @canany(['publish_content', 'edit_content', 'view_content', 'delete_content', 'manage_archived', 'manage_content_types', 'manage_tags'])
+            @canany(['publish_content', 'edit_content', 'delete_content', 'manage_archived', 'manage_content_types', 'manage_tags'])
             <x-responsive-nav-link :href="route('content.index')" :active="request()->routeIs('content.index')">
                 {{ __('Content') }}
             </x-responsive-nav-link>

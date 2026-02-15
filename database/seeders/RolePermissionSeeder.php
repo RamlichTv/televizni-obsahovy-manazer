@@ -15,9 +15,9 @@ class RolePermissionSeeder extends Seeder
         ];
 
         $perms = [
-            ['name' => 'publish_content'],
+            ['name' => 'create_content'],
             ['name' => 'edit_content'],
-            ['name' => 'view_content'],
+            ['name' => 'publish_content'],
             ['name' => 'delete_content'],
             ['name' => 'bypass_max_size'],
             ['name' => 'manage_archived'],
@@ -52,9 +52,8 @@ class RolePermissionSeeder extends Seeder
         $mediaRoleId = DB::table('roles')->where('name', 'Mediální Tým')->value('id');
         $mediaPerms = DB::table('permissions')
             ->whereIn('name', [
+                'create_content',
                 'publish_content',
-                'edit_content',
-                'view_content',
             ])->pluck('id');
 
         foreach ($mediaPerms as $pid) {

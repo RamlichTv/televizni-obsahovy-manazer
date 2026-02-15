@@ -38,14 +38,14 @@ Route::middleware('auth')->group(function () {
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
     /* ## CONTENT ROUTES ## */
-    Route::name('content.')->prefix('content')->group(function () {
+    Route::middleware('perms:publish_content,edit_content,delete_content,manage_archived,manage_content_types,manage_tags')
+        ->name('content.')
+        ->prefix('content')->group(function () {
 
         // ## Viewing
         Route::get('/', [ContentController::class, 'index'])
-            ->middleware('perms:publish_content,edit_content,view_content,delete_content,manage_archived,manage_content_types,manage_tags')
             ->name('index');
         Route::get('/{content_object}', [ContentController::class, 'show'])
-            ->middleware('can:view,content_object')
             ->name('show');
 
         // ## Creating
@@ -83,7 +83,7 @@ Route::middleware('auth')->group(function () {
         });
 
         // ## Tags
-        Route::prefix('tags')->name('tags.')->middleware('can:manage_tags')->group(function() {
+        Route::middleware('can:manage_tags')->prefix('tags')->name('tags.')->group(function() {
             Route::post('/', [TagsController::class, 'store'])->name('store');
             Route::delete('/{tag}', [TagsController::class, 'destroy'])->name('destroy');
         });
