@@ -19,6 +19,7 @@
             <input type="file" class="hidden"
                         id="photo"
                         name="avatar"
+                        accept="image/*"
                         x-ref="photo"
                         x-on:change="
                                 photoName = $refs.photo.files[0].name;
