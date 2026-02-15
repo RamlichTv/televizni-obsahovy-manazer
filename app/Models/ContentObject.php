@@ -18,11 +18,22 @@ class ContentObject extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'title',
-        'path',
-        'content_type_id',
-        'created_by',
-        'is_archived',
+        'id',
+        'name',
+        'type_id',
+        'author_id',
+        'description',
+        'priority',
+        'status_id',
+        'meta',
+        'published_at',
+        'expires_at',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
+        'expires_at' => 'datetime',
+        'published_at' => 'datetime',
     ];
 
     protected static function booted() : void {
@@ -30,7 +41,7 @@ class ContentObject extends Model
     }
 
     public function type() : BelongsTo {
-        return $this->belongsTo(ContentType::class, 'content_type_id');
+        return $this->belongsTo(ContentType::class, 'type_id');
     }
 
     public function author() : BelongsTo {

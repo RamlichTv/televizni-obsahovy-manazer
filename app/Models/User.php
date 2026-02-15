@@ -48,7 +48,7 @@ class User extends Authenticatable
     }
 
     public function content_objects() : HasMany {
-        return $this->hasMany(ContentObject::class);
+        return $this->hasMany(ContentObject::class, 'author_id');
     }
 
     public function isAdmin(): bool
