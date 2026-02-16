@@ -28,7 +28,8 @@ class ContentObjectRequest extends FormRequest
             'type_id' => ['required', 'exists:content_types,id'],
             'description' => ['nullable', 'string'],
             'priority' => ['required', 'integer', 'min:0', 'max:20'],
-            'expires_at' => ['nullable', 'date', 'after:today'],
+            'expires_at' => ['nullable', 'date', 'after:date'],
+            'published_at' => ['nullable', 'date', 'after_or_equal:date'],
             'tags' => ['array'],
             'tags.*' => ['exists:tags,id'],
             

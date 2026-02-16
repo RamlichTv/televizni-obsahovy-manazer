@@ -139,7 +139,8 @@ class ContentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|integer|min:0|max:20',
-            'expires_at' => ['nullable', 'date', 'after:today'],
+            'expires_at' => ['nullable', 'date', 'after:date'],
+            'published_at' => ['nullable', 'date', 'after_or_equal:date'],
             'tags' => 'array',
             'tags.*' => 'exists:tags,id',
             'file_upload' => [

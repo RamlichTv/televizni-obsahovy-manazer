@@ -142,11 +142,11 @@
                             <x-input-error class="mt-2" :messages="$errors->get('description')" />
                         </div>
 
-                        <!-- 4. Tags and expiration -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 4. Tags, Expiration and Publishment -->
+                        <div class="grid items-center grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <x-input-label for="tags" :value="__('Tags')" />
-                                <x-select name="tags[]" id="tags" multiple>
+                                <x-select class="h-full" name="tags[]" id="tags" multiple>
                                     @foreach(\App\Models\Tag::all() as $tag)
                                         <option value="{{ $tag->id }}" {{ in_array($tag->id, old('tags', [])) ? 'selected' : '' }}>
                                             {{ $tag->name }}
@@ -157,11 +157,19 @@
                                 <x-input-error class="mt-2" :messages="$errors->get('tags')" />
                             </div>
 
-                            <div>
-                                <x-input-label for="expires_at" :value="__('Expiration Date (Optional)')" />
-                                <x-text-input id="expires_at" name="expires_at" type="date" class="mt-1 block w-full" :value="old('expires_at')" />
-                                <p class="text-xs text-gray-500 mt-1">{{ __('Content will be archived after this date.') }}</p>
-                                <x-input-error class="mt-2" :messages="$errors->get('expires_at')" />
+                            <div class="flex flex-col gap-2">
+                                @can('publish_content')
+                                <div>
+                                    <x-input-label for="published_at" :value="__('Publish Date')" />
+                                    <x-text-input id="published_at" name="published_at" type="datetime-local" class="mt-1 block w-full" :value="old('published_at')" />
+                                    <x-input-error class="mt-2" :messages="$errors->get('published_at')" />
+                                </div>
+                                @endcan
+                                <div>
+                                    <x-input-label for="expires_at" :value="__('Expiration Date')" />
+                                    <x-text-input id="expires_at" name="expires_at" type="datetime-local" class="mt-1 block w-full" :value="old('expires_at')" />
+                                    <x-input-error class="mt-2" :messages="$errors->get('expires_at')" />
+                                </div>
                             </div>
                         </div>
 
@@ -177,7 +185,6 @@
                         </div>
                         <x-input-error class="mt-2" :messages="$errors->get('file_upload')" />
                     </form>
-
                 </div>
             </div>
         </div>

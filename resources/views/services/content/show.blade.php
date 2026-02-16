@@ -201,18 +201,26 @@
                         </div>
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Created') }}</dt>
-                            <dd class="font-medium text-gray-900">{{ $content->created_at->format('d.m.Y') }}</dd>
+                            <dd class="font-medium text-gray-900">{{ $content->created_at->format('d.m.Y H:i') }}</dd>
                         </div>
+                        @if ($content->published_at)
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">{{ $content->published_at->isPast() ? __('Published at') : __('Publishing at') }}</dt>
+                                <dd class="font-medium text-gray-900">{{ $content->published_at->format('d.m.Y H:i') }}</dd>
+                            </div>
+                        @endif
+                        @if (!$content->expires_at->isPast())
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Expires') }}</dt>
-                            <dd class="font-medium {{ $content->expires_at && $content->expires_at->isPast() ? 'text-red-600' : 'text-gray-900' }}">
-                                {{ $content->expires_at ? $content->expires_at->format('d.m.Y') : 'Never' }}
+                            <dd class="font-medium text-gray-900">
+                                {{ $content->expires_at ? $content->expires_at->format('d.m.Y H:i') : 'Never' }}
                             </dd>
                         </div>
+                        @endif
                         @if ($content->archived_at)
                             <div class="flex justify-between">
-                                <dt class="text-gray-500 font-semibold">{{ __('Archived') }}</dt>
-                                <dd class="font-medium text-red-600">{{ $content->archived_at->format('d.m.Y H:i') }}</dd>
+                                <dt class="text-gray-500">{{ __('Archived') }}</dt>
+                                <dd class="font-medium text-orange-500">{{ $content->archived_at->format('d.m.Y H:i') }}</dd>
                             </div>
                         @endif
                         @if ($content->deleted_at)

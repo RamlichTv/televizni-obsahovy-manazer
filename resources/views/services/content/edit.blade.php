@@ -231,10 +231,15 @@
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#5EB4EE] focus:border-[#5EB4EE]">
                         @error('priority') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                     </div>
-
+                    @if (!$content->published_at || $content->published_at > date('Y-m-d H:i:s'))
+                    <div>
+                        <label for="published_at" class="block text-sm font-medium text-gray-700">{{  __('Publishing Date') }}</label>
+                        <x-text-input type="datetime-local" name="published_at" id="published_at" value="{{ $content->published_at ? $content->published_at->format('Y-m-d\TH:i') : '' }}" class="w-full"/>
+                    </div>
+                    @endif
                     <div>
                         <label for="expires_at" class="block text-sm font-medium text-gray-700">{{ __('Expiration Date') }}</label>
-                        <x-text-input type="date" name="expires_at" id="expires_at" value="{{ $content->expires_at ? $content->expires_at->format('Y-m-d') : '' }}" class="w-full"/>
+                        <x-text-input type="datetime-local" name="expires_at" id="expires_at" value="{{ $content->expires_at ? $content->expires_at->format('Y-m-d\TH:i') : '' }}" class="w-full"/>
                     </div>
                 </div>
 
