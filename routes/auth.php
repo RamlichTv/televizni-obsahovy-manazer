@@ -38,7 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
 
     /* ## CONTENT ROUTES ## */
-    Route::middleware('perms:publish_content,edit_content,delete_content,manage_archived,manage_content_types,manage_tags')
+    Route::middleware('perms:create_content,publish_content,edit_content,delete_content,manage_archived,manage_content_types,manage_tags')
         ->name('content.')
         ->prefix('content')->group(function () {
 
