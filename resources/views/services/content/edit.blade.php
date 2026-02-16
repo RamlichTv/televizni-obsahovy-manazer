@@ -28,7 +28,7 @@
         
         {{-- MAIN SECTION (Center) --}}
         <div class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
-             <button type="button" @click="sidebarOpen = !sidebarOpen" class="absolute top-4 right-4 z-20 p-2 bg-white rounded shadow text-gray-500 hover:text-[#077CB6] transition">
+             <button type="button" @click="sidebarOpen = !sidebarOpen" class="fixed top-20 right-4 z-20 p-2 bg-white rounded shadow-md text-gray-500 hover:text-[#077CB6] transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
 
@@ -166,9 +166,15 @@
         </div>
 
         {{-- SIDEBAR (Right) --}}
-        <div class="w-full lg:w-80 h-[40%] lg:h-full bg-white border-t lg:border-t-0 border-l border-gray-200 overflow-y-auto transition-all duration-300"
+        <div class="w-full lg:w-80 h-[40%] lg:h-full bg-white border-l border-gray-200 overflow-y-auto transition-all duration-300 ease-in-out"
              :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:hidden'"
-             x-show="sidebarOpen">
+             x-show="sidebarOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform translate-x-10"
+             x-transition:enter-end="opacity-100 transform translate-x-0"
+             x-transition:leave="transition ease-in duration-300"
+             x-transition:leave-start="opacity-100 transform translate-x-0"
+             x-transition:leave-end="opacity-0 transform translate-x-10">
             
             <div class="p-6 space-y-6">
 
@@ -178,7 +184,7 @@
                 <div>
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{{ __('Author') }}</h4>
                     <div class="flex items-center gap-3">
-                         @if ($content->author && Storage::disk('public')->exists('users/' . $content->author->username . '/' . $content->author->avatar))
+                        @if ($content->author && Storage::disk('public')->exists('users/' . $content->author->username . '/' . $content->author->avatar))
                             <img src="{{ asset('storage/users/' . $content->author->username . '/' . $content->author->avatar) }}" class="w-10 h-10 rounded-full object-cover shadow-sm">
                         @else
                             <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-lg">
@@ -233,12 +239,14 @@
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#5EB4EE] focus:border-[#5EB4EE]">
                         @error('priority') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                     </div>
-                    @if (!$content->published_at || $content->published_at > date('Y-m-d H:i:s'))
-                    <div>
-                        <label for="published_at" class="block text-sm font-medium text-gray-700">{{  __('Publishing Date') }}</label>
-                        <x-text-input type="datetime-local" name="published_at" id="published_at" value="{{ $content->published_at ? $content->published_at->format('Y-m-d\TH:i') : '' }}" class="w-full"/>
-                    </div>
-                    @endif
+                    @can('publish_content')
+                        @if (!$content->published_at || $content->published_at > date('Y-m-d H:i:s'))
+                        <div>
+                            <label for="published_at" class="block text-sm font-medium text-gray-700">{{  __('Publishing Date') }}</label>
+                            <x-text-input type="datetime-local" name="published_at" id="published_at" value="{{ $content->published_at ? $content->published_at->format('Y-m-d\TH:i') : '' }}" class="w-full"/>
+                        </div>
+                        @endif
+                    @endcan
                     <div>
                         <label for="expires_at" class="block text-sm font-medium text-gray-700">{{ __('Expiration Date') }}</label>
                         <x-text-input type="datetime-local" name="expires_at" id="expires_at" value="{{ $content->expires_at ? $content->expires_at->format('Y-m-d\TH:i') : '' }}" class="w-full"/>

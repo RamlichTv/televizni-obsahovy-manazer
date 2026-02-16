@@ -37,7 +37,7 @@
         <div class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
             
             {{-- Toggle Sidebar Button (Floating) --}}
-            <button @click="sidebarOpen = !sidebarOpen" class="absolute top-4 right-4 z-20 p-2 bg-white rounded shadow text-gray-500 hover:text-[#077CB6] transition" title="Toggle Sidebar">
+            <button @click="sidebarOpen = !sidebarOpen" class="fixed top-20 right-4 z-20 p-2 bg-white rounded shadow-md text-gray-500 hover:text-[#077CB6] transition" title="Toggle Sidebar">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
 
@@ -155,7 +155,7 @@
         </div>
 
         {{-- SIDEBAR (Right) --}}
-        <div class="w-full lg:w-80 bg-white border-l border-gray-200 overflow-y-auto transition-all duration-300 ease-in-out"
+        <div class="w-full lg:w-80 h-[40%] lg:h-full bg-white border-l border-gray-200 overflow-y-auto transition-all duration-300 ease-in-out"
              :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:hidden'"
              x-show="sidebarOpen"
              x-transition:enter="transition ease-out duration-300"
@@ -209,7 +209,7 @@
                                 <dd class="font-medium text-gray-900">{{ $content->published_at->format('d.m.Y H:i') }}</dd>
                             </div>
                         @endif
-                        @if (!$content->expires_at->isPast())
+                        @if (!$content->expires_at?->isPast())
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Expires') }}</dt>
                             <dd class="font-medium text-gray-900">
