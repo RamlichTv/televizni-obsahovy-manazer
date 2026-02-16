@@ -131,4 +131,9 @@
         <path d="M5 13L9 17L19 7" stroke="{{ $fill }}" stroke-width="{{ $width }}" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>    
     @endif
+    @if ($name === 'arrow')
+    <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="{{ $fill }}" stroke-width="{{ $width }}" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    @endif
 </svg>
