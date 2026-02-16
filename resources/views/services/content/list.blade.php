@@ -15,7 +15,7 @@
         <div class="flex md:flex-row md:items-center justify-between w-full gap-4">
             <div class="flex items-center gap-4">
                 <a href="{{ route('content.index') }}" class="text-gray-500 hover:text-gray-700 transition">
-                    <x-icon class="size-6" name="back-arrow"/>
+                    <x-icon class="size-6 rotate-180" name="arrow"/>
                 </a>
                 <h1 class="text-2xl font-bold text-gray-800">
                     {{ __('Content List') }}
