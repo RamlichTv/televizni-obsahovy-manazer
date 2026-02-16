@@ -9,13 +9,17 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::call(function () {
-    $affected = \App\Models\ContentObject::where('status_id', 2)
+Artisan::command('content:archive', function () {
+    $archived = \App\Models\ContentObject::where('status_id', 2)
         ->whereNotNull('expires_at')
-        ->where('expires_at', '<', now('1'))
+        ->where('expires_at', '<=', date('Y-m-d H:i:s'))
         ->update(['status_id' => 3, 'archived_at' => date('Y-m-d H:i:s')]);
 
-    if ($affected > 0) {
-        Log::info("Scheduler: {$affected} content objects have been automatically archived.");
+    if ($archived > 0) {
+        Log::info("Scheduler: {$archived} content objects have been automatically archived.");
     }
+})->purpose('Archives all expired content objects');
+
+Schedule::call(function () {
+    Artisan::call('content:archive');
 })->everyMinute();
