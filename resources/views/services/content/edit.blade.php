@@ -1,6 +1,6 @@
 <x-app-layout :title="__('Edit Content')">
     <x-slot name="contentNavTitle">
-        {{ __('Editing: ' . $content->name) }}
+        {{ __('Editing content') }}
     </x-slot>
 
     <x-slot name="header">
@@ -166,7 +166,7 @@
         </div>
 
         {{-- SIDEBAR (Right) --}}
-        <div class="w-full lg:w-80 h-[50%] lg:h-full bg-white border-t lg:border-t-0 border-l border-gray-200 overflow-y-auto transition-all duration-300"
+        <div class="w-full lg:w-80 h-[40%] lg:h-full bg-white border-t lg:border-t-0 border-l border-gray-200 overflow-y-auto transition-all duration-300"
              :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:hidden'"
              x-show="sidebarOpen">
             
@@ -202,10 +202,12 @@
                             <dt class="text-gray-500">{{ __('Type') }}</dt>
                             <dd class="font-medium text-gray-900">{{ $content->type->name ?? 'Unknown' }}</dd>
                         </div>
+                        @if ($content->type->is_file)
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Allowed extensions') }}</dt>
                             <dd class="max-w-32 truncate font-medium text-gray-900">{{ implode(', ', $content->type->extension_whitelist ?? []) }}</dd>
                         </div>
+                        @endif
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Created') }}</dt>
                             <dd class="font-medium text-gray-900">{{ $content->created_at->format('d.m.Y') }}</dd>
@@ -248,7 +250,7 @@
                 {{-- Tags --}}
                 <div>
                     <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">{{ __('Tags') }}</label>
-                    <select name="tags[]" id="tags" multiple class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#5EB4EE] focus:border-[#5EB4EE] h-40">
+                    <select name="tags[]" id="tags" multiple class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#5EB4EE] focus:border-[#5EB4EE] h-20">
                         @foreach($tags as $tag)
                             <option value="{{ $tag->id }}" {{ $content->tags->contains($tag->id) ? 'selected' : '' }}>
                                 {{ $tag->name }}

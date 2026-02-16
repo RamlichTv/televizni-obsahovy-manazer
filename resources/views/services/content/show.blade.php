@@ -1,6 +1,6 @@
 <x-app-layout :title="$content->name">
     <x-slot name="contentNavTitle">
-        {{ __('Showing: ' . $content->name) }}
+        {{ __('Showing content') }}
     </x-slot>
 
     <x-slot name="header">
