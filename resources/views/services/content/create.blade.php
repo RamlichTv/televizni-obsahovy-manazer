@@ -62,26 +62,11 @@
                     <form action="{{ route('content.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                         @csrf
 
-                        <!-- 1. Row: Name and Priority -->
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div class="md:col-span-3">
-                                <x-input-label for="name" :value="__('Content Name')" />
-                                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required autofocus />
-                                <x-input-error class="mt-2" :messages="$errors->get('name')" />
-                            </div>
-
-                            <div>
-                                <x-input-label for="priority" :value="__('Priority (0-20)')" />
-                                <x-text-input id="priority" name="priority" type="number" min="0" max="20" class="mt-1 block w-full" :value="old('priority', 0)" required />
-                                <x-input-error class="mt-2" :messages="$errors->get('priority')" />
-                            </div>
-                        </div>
-
-                        <!-- 2. Content type and upload -->
+                        <!-- 1. Content type and upload -->
                         <div class="flex flex-col md:flex-row gap-6 md:gap-8">
                             <!-- Type selection -->
                             <div class="flex-1">
-                                <x-input-label for="type_id" :value="__('Content Type')" />
+                                <x-input-label for="type_id" :value="__('Content Type') . '*'" />
                                 <x-select 
                                     name="type_id" 
                                     id="type_id" 
@@ -98,7 +83,7 @@
 
                             <!-- File upload (shown only after type selection) -->
                             <div x-show="selectedType && currentType.is_file" class="flex-1" x-transition.opacity>
-                                <x-input-label for="file_upload" x-text="'Upload ' + (currentType.name || 'File')" />
+                                <x-input-label for="file_upload" x-text="'Upload ' + (currentType.name || 'File') + '*'" />
                                 
                                 <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md relative hover:bg-gray-50 transition">
                                     <div class="space-y-1 text-center">
@@ -128,6 +113,21 @@
                                         </template>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Row: Name and Priority -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div class="md:col-span-3">
+                                <x-input-label for="name" :value="__('Content Name') . '*'" />
+                                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required autofocus />
+                                <x-input-error class="mt-2" :messages="$errors->get('name')" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="priority" :value="__('Priority (0-20)')" />
+                                <x-text-input id="priority" name="priority" type="number" min="0" max="20" class="mt-1 block w-full" :value="old('priority', 0)" required />
+                                <x-input-error class="mt-2" :messages="$errors->get('priority')" />
                             </div>
                         </div>
 
