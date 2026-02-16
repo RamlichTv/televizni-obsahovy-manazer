@@ -40,7 +40,7 @@
         </div>
     </x-slot>
 
-    <section class="p-4 max-w-screen-2xl w-full mx-auto">
+    <section class="flex flex-col grow p-4 max-w-screen-2xl w-full mx-auto">
         
         {{-- Filters (form) --}}
         <div x-data="{ showFilters: false }" class="mb-6 bg-white rounded-lg shadow p-4">
@@ -140,7 +140,7 @@
         </div>
 
         {{-- Pagination --}}
-        <div class="mt-6">
+        <div class="flex flex-col justify-end grow mt-6">
             {{ $content_objects->withQueryString()->links() }}
         </div>
         
