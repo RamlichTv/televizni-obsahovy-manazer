@@ -20,6 +20,19 @@ Artisan::command('content:archive', function () {
     }
 })->purpose('Archives all expired content objects');
 
+Artisan::command('content:publish', function () {
+    $published = \App\Models\ContentObject::where('status_id', 1)
+        ->whereNotNull('published_at')
+        ->where('published_at', '<=', date('Y-m-d H:i:s'))
+        ->update(['status_id' => 2]);
+   
+    if ($published > 0) {
+        Log::info("Scheduler: {$published} content objects have been automatically published.");
+    }
+})->purpose('Publishes all content objects scheduled for publishing');
+
+
 Schedule::call(function () {
+    Artisan::call('content:publish');
     Artisan::call('content:archive');
 })->everyMinute();
