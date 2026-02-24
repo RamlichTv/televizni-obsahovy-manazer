@@ -110,7 +110,7 @@ class ContentController extends Controller
                 'path' => $path // storage/content/uuid.jpg
             ];
             
-            $content->update(['meta' => json_encode($meta)]);
+            $content->update(['meta' => $meta]);
         }
 
         if ($request->has('tags')) {
