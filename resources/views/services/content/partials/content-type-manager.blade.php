@@ -13,6 +13,8 @@
             </thead>
             <tbody>
                 @forelse($contentTypes as $type)
+
+                    {{-- Type summary row with inline actions. --}}
                     <tr class="bg-white border-b hover:bg-gray-50">
                         <td class="px-4 py-2 font-medium text-gray-900">{{ $type->name }}</td>
                         <td class="px-4 py-2">
@@ -29,6 +31,8 @@
                                     <span @click="editing = !editing" x-show="editingTypeId !== {{ $type->id }}">{{ __('Edit') }}</span>
                                     <span @click="editing = !editing" x-show="editingTypeId === {{ $type->id }}">{{ __('Close') }}</span>
                                 </button>
+
+                                {{-- Delete action is guarded with a confirmation prompt. --}}
                                 <form action="{{ route('content.types.destroy', $type) }}" method="POST" onsubmit="return confirm('Delete Type? Content associated with this type might break.');">
                                     @csrf
                                     @method('DELETE')
@@ -37,6 +41,8 @@
                             </div>
                         </td>
                     </tr>
+
+                    {{-- Expanded inline editor for the selected type row. --}}
                     <tr x-show="editingTypeId === {{ $type->id }}" x-cloak class="bg-gray-50 border-b">
                         <td colspan="4" class="px-4 py-4">
                             <form action="{{ route('content.types.update', $type) }}"
@@ -134,6 +140,7 @@
             <div x-show="isFile" x-transition class="space-y-3">
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase">{{ __('Extensions or MIME (comma separated)') }}</label>
+                    
                     {{-- Note: this uses 'extensions' to match the controller. --}}
                     <input type="text" name="extensions" placeholder="json, lottie, gif" 
                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]"
