@@ -18,17 +18,34 @@
         </div>
     </x-slot>
 
-    {{-- Wrap the whole page in a form. --}}
+    {{-- Build picker data and restore selected tags when validation fails. --}}
+    @php
+        $tagsForPicker = collect($tags ?? [])
+            ->map(fn ($tag) => [
+                'id' => (string) $tag->id,
+                'name' => $tag->name,
+            ])
+            ->values();
+
+        $selectedTagIds = collect((array) old('tags', $content->tags->pluck('id')->all()))
+            ->map(fn ($id) => (string) $id)
+            ->values();
+    @endphp
+
+    {{-- Wrap the whole page in a form so sidebar controls can submit the same payload. --}}
     <form method="POST" action="{{ route('content.update', $content) }}" enctype="multipart/form-data" id="edit-form"
           class="flex flex-col lg:flex-row h-[calc(100vh-180px)] overflow-hidden" 
-          x-data="{ sidebarOpen: true }">
+          x-data="{
+              // Controls right sidebar visibility on both desktop and mobile layouts.
+              sidebarOpen: true
+          }">
         
         @csrf
         @method('PATCH')
         
         {{-- MAIN SECTION (Center) --}}
         <div class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
-             <button type="button" @click="sidebarOpen = !sidebarOpen" class="fixed top-20 right-4 z-20 p-2 bg-white rounded shadow-md text-gray-500 hover:text-[#077CB6] transition">
+            <button type="button" @click="sidebarOpen = !sidebarOpen" class="fixed top-20 right-4 z-20 p-2 bg-white rounded shadow-md text-gray-500 hover:text-[#077CB6] transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
             </button>
 
@@ -152,6 +169,7 @@
                     @error('description') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
                 
+                {{-- Validation summary to surface all backend errors at once. --}}
                 @if ($errors->any())
                     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
                         <strong class="font-bold">{{ __('Validation Error!') }}</strong>
@@ -231,7 +249,7 @@
                     </dl>
                 </div>
 
-                {{-- Settings --}}
+                {{-- Editable publishing and scheduling settings. --}}
                 <div class="space-y-4">
                     <div>
                         <label for="priority" class="block text-sm font-medium text-gray-700">{{ __('Priority (0-20)') }}</label>
@@ -257,15 +275,21 @@
 
                 {{-- Tags --}}
                 <div>
-                    <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">{{ __('Tags') }}</label>
-                    <select name="tags[]" id="tags" multiple class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#5EB4EE] focus:border-[#5EB4EE] h-20">
-                        @foreach($tags as $tag)
-                            <option value="{{ $tag->id }}" {{ $content->tags->contains($tag->id) ? 'selected' : '' }}>
-                                {{ $tag->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">{{ __('Hold Ctrl (Cmd) to select multiple.') }}</p>
+                    <x-multi-select-picker
+                        :label="__('Tags')"
+                        input-name="tags[]"
+                        :items="$tagsForPicker"
+                        :selected="$selectedTagIds"
+                        :placeholder="__('Tag')"
+                        :no-results-text="__('No tags available to add.')"
+                        :add-aria-label="__('Add tag')"
+                        :remove-aria-label="__('Remove tag')"
+                        chip-prefix="#"
+                        option-prefix="#"
+                        panel-position="up"
+                    />
+                    @error('tags') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                    @error('tags.*') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
                 <hr class="border-gray-100">
