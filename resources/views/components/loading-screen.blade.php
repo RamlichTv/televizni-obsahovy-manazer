@@ -1,3 +1,8 @@
+{{--
+    Overview:
+    This view composes the components > loading-screen interface, arranging reusable components and route-driven actions so the page stays readable while presentation concerns remain separated from backend logic.
+--}}
+
 @props([
     'fill' => "#077cb6"
 ])
@@ -35,16 +40,100 @@
         </svg>
     </div>
     <script>
-        window.addEventListener('load', () => {
+        (() => {
+            const loadingScreen = document.getElementById('loading-screen')
             const loader = document.getElementById('loader')
-            const loading_screen = document.getElementById('loading-screen')
-            if (loader) {
-                loader.classList.add('opacity-0')
-                setTimeout(() => {
-                    loader.remove()
-                    loading_screen.remove()
-                }, 300)
+
+            if (!loadingScreen || !loader || loadingScreen.dataset.initialized === 'true') {
+                return
             }
-        })
+
+            loadingScreen.dataset.initialized = 'true'
+
+            const hideLoader = () => {
+                loader.classList.add('opacity-0', 'pointer-events-none')
+                setTimeout(() => loader.classList.add('hidden'), 300)
+            }
+
+            const showLoader = () => {
+                loader.classList.remove('hidden', 'opacity-0', 'pointer-events-none')
+            }
+
+            const shouldHandleLink = (event, link) => {
+                if (event.defaultPrevented || event.button !== 0) {
+                    return false
+                }
+
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                    return false
+                }
+
+                if (link.target && link.target !== '_self') {
+                    return false
+                }
+
+                if (link.hasAttribute('download')) {
+                    return false
+                }
+
+                const href = link.getAttribute('href')
+
+                if (!href || href.startsWith('#')) {
+                    return false
+                }
+
+                const normalizedHref = href.trim().toLowerCase()
+
+                if (
+                    normalizedHref.startsWith('javascript:') ||
+                    normalizedHref.startsWith('mailto:') ||
+                    normalizedHref.startsWith('tel:') ||
+                    normalizedHref.startsWith('data:')
+                ) {
+                    return false
+                }
+
+                const linkUrl = new URL(link.href, window.location.href)
+                const currentUrl = new URL(window.location.href)
+
+                if (
+                    linkUrl.origin === currentUrl.origin &&
+                    linkUrl.pathname === currentUrl.pathname &&
+                    linkUrl.search === currentUrl.search &&
+                    linkUrl.hash
+                ) {
+                    return false
+                }
+
+                return true
+            }
+
+            window.addEventListener('load', hideLoader, { once: true })
+            window.addEventListener('pageshow', hideLoader)
+
+            document.addEventListener('click', (event) => {
+                const link = event.target.closest('a[href]')
+
+                if (!link || !shouldHandleLink(event, link)) {
+                    return
+                }
+
+                showLoader()
+            })
+
+            document.addEventListener('submit', (event) => {
+                if (event.defaultPrevented || !(event.target instanceof HTMLFormElement)) {
+                    return
+                }
+
+                if (event.target.target && event.target.target !== '_self') {
+                    return
+                }
+
+                showLoader()
+            })
+
+            window.addEventListener('beforeunload', showLoader)
+        })()
     </script>
 </div>
