@@ -6,14 +6,14 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800 hover:scale-[1.15] transition ease-in-out duration-[225ms]" :text="false"/>
+                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800 hover:scale-[1.15] transition ease-in-out duration-225ms" :text="false"/>
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
                 <div class="hidden md:-my-px grow md:ms-10 md:flex">
 
-                    @canany(['publish_content', 'edit_content', 'delete_content', 'manage_archived', 'manage_content_types', 'manage_tags'])
+                    @canany(['create_content', 'edit_content', 'publish_content', 'delete_content', 'manage_archived', 'manage_content_types', 'manage_tags'])
                     <x-nav-link :href="route('content.index')" :active="request()->routeIs('content.*')">
                         {{ $contentNavTitle ?? __('Content') }}
                     </x-nav-link>
@@ -21,41 +21,41 @@
                     @endcanany
 
                     @can('manage_screens')
-                    <x-nav-link :href="route('screens.index')" :active="request()->routeIs('screens.*')">
+                    <x-nav-link :href="route('screens.index')" :active="request()->routeIs('screens.*') || request()->routeIs('screen.*')">
                         {{ $screensNavTitle ?? __('Screens') }}
                     </x-nav-link>
                     {{ $screensNav ?? '' }}
                     @endcan
 
                     @canany(['create_profiles', 'edit_profiles', 'delete_profiles'])
-                    <x-nav-link :href="route('profiles.index')" :active="request()->routeIs('profiles.*')">
+                    <x-nav-link :href="route('profiles.index')" :active="request()->routeIs('profiles.*') || request()->routeIs('profile.*')">
                         {{ $profilesNavTitle ?? __('Profiles') }}
                     </x-nav-link>
                     {{ $profilesNav ?? '' }}
                     @endcanany
 
                     @canany(['delete_modules', 'edit_modules', 'create_modules', 'manage_module_categories'])
-                    <x-nav-link :href="route('modules.index')" :active="request()->routeIs('modules.*')">
+                    <x-nav-link :href="route('modules.index')" :active="request()->routeIs('modules.*') || request()->routeIs('module.*')">
                         {{ $modulesNavTitle ?? __('Modules') }}
                     </x-nav-link>
                     {{ $modulesNav ?? '' }}
                     @endcanany
 
-                    @canany(['manage_acl', 'manage_users'])
+                    @can('manage_users')
                     <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                         {{ $usersNavTitle ?? __('Users') }}
                     </x-nav-link>
                     {{ $usersNav ?? '' }}
-                    @endcanany
+                    @endcan
 
                     @can('manage_acl')
-                    <x-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*')">
+                    <x-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*') || request()->routeIs('role.*')">
                         {{ $rolesNavTitle ?? __('Roles') }}
                     </x-nav-link>
                     {{ $rolesNav ?? '' }}
                     @endcan
 
-                    <div id="nav-item-spacer" class="grow-[5]"></div>
+                    <div id="nav-item-spacer" class="grow-5"></div>
 
                     @can('view_events')
                     <x-nav-link :href="route('events.index')" :active="request()->routeIs('events.*')">
@@ -121,31 +121,31 @@
             @endcanany
 
             @can('manage_screens')
-            <x-responsive-nav-link :href="route('screens.index')" :active="request()->routeIs('screens.*')">
+            <x-responsive-nav-link :href="route('screens.index')" :active="request()->routeIs('screens.*') || request()->routeIs('screen.*')">
                 {{ $screensNavTitle ?? __('Screens') }}
             </x-responsive-nav-link>
             @endcan
 
             @canany(['create_profiles', 'edit_profiles', 'delete_profiles'])
-            <x-responsive-nav-link :href="route('profiles.index')" :active="request()->routeIs('profiles.*')">
+            <x-responsive-nav-link :href="route('profiles.index')" :active="request()->routeIs('profiles.*') || request()->routeIs('profile.*')">
                 {{ $profilesNavTitle ?? __('Profiles') }}
             </x-responsive-nav-link>
             @endcanany
 
             @canany(['delete_modules', 'edit_modules', 'create_modules', 'manage_module_categories'])
-            <x-responsive-nav-link :href="route('modules.index')" :active="request()->routeIs('modules.*')">
+            <x-responsive-nav-link :href="route('modules.index')" :active="request()->routeIs('modules.*') || request()->routeIs('module.*')">
                 {{ $modulesNavTitle ?? __('Modules') }}
             </x-responsive-nav-link>
             @endcanany
 
-            @canany(['manage_acl', 'manage_users'])
+            @can('manage_users')
             <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                 {{ $usersNavTitle ?? __('Users') }}
             </x-responsive-nav-link>
-            @endcanany
+            @endcan
 
             @can('manage_acl')
-            <x-responsive-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*')">
+            <x-responsive-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*') || request()->routeIs('role.*')">
                 {{ $rolesNavTitle ?? __('Roles') }}
             </x-responsive-nav-link>
             @endcan
