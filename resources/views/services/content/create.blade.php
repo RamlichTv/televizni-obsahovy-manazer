@@ -66,7 +66,7 @@
                         <div class="flex flex-col md:flex-row gap-6 md:gap-8">
                             <!-- Type selection -->
                             <div class="flex-1">
-                                <x-input-label for="type_id" :value="__('Content Type') . '*'" />
+                                <x-input-label for="type_id" :value="__('Content Type')" :required="true"/>
                                 <x-select 
                                     name="type_id" 
                                     id="type_id" 
@@ -83,7 +83,7 @@
 
                             <!-- File upload (shown only after type selection) -->
                             <div x-show="selectedType && currentType.is_file" class="flex-1" x-transition.opacity>
-                                <x-input-label for="file_upload" x-text="'Upload ' + (currentType.name || 'File') + '*'" />
+                                <x-input-label for="file_upload" x-text="'Upload ' + (currentType.name || 'File')" :required="true"/>
                                 
                                 <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md relative hover:bg-gray-50 transition">
                                     <div class="space-y-1 text-center">
@@ -119,7 +119,7 @@
                         <!-- 2. Row: Name and Priority -->
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div class="md:col-span-3">
-                                <x-input-label for="name" :value="__('Content Name') . '*'" />
+                                <x-input-label for="name" :value="__('Content Name')" :required="true"/>
                                 <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required autofocus />
                                 <x-input-error class="mt-2" :messages="$errors->get('name')" />
                             </div>
