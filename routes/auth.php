@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Tom\DashboardController;
 use App\Http\Controllers\Tom\EventsController;
@@ -220,15 +219,15 @@ Route::middleware('auth')->group(function () {
     });
 
     /* ## USER MANAGEMENT ROUTES */
-    Route::middleware('perms:manage_users,manage_acl')->group(function() {
-        Route::get('/users', [UsersController::class, 'index'])->name('users.index');
-        Route::get('/user/{user}/edit', [UsersController::class, 'edit'])->name('edit');
-        Route::patch('/user/{user}', [UsersController::class, 'update'])->name('update');
-    });
-    Route::middleware('can:manage_users')->prefix('user')->name('user.')->group(function() {
-        Route::post('/register', [RegisteredUserController::class, 'store']);
+    Route::middleware('can:manage_users')->prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UsersController::class, 'index'])->name('index');
+        Route::get('/{user}', [UsersController::class, 'show'])->whereUuid('user')->name('show');
+        Route::get('/{user}/edit', [UsersController::class, 'edit'])->whereUuid('user')->name('edit');
+        Route::patch('/{user}', [UsersController::class, 'update'])->whereUuid('user')->name('update');
+
         Route::get('/create', [UsersController::class, 'create'])->name('create');
-        Route::delete('/{user}', [UsersController::class, 'destroy'])->name('destroy');
+        Route::post('/', [UsersController::class, 'store'])->name('store');
+        Route::delete('/{user}', [UsersController::class, 'destroy'])->whereUuid('user')->name('destroy');
     });
 
     /* ## ROLE MANAGEMENT ROUTES */
