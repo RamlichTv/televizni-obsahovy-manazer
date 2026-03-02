@@ -42,10 +42,12 @@
             </button>
 
             <div class="max-w-4xl mx-auto space-y-8">
+                {{-- Render file preview only for file-based content types. --}}
                 @if ($content->type->is_file)
                     
                 {{-- Content preview --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[300px] flex items-center justify-center relative group">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-75 flex items-center justify-center relative group">
+                    {{-- Resolve storage metadata used by preview and file details. --}}
                     @php
                         $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
                         $path = $meta['path'] ?? null;
@@ -54,9 +56,9 @@
                     @endphp
 
                     @if($url && str_contains($mime, 'image'))
-                        <img src="{{ $url }}" class="max-w-full max-h-[600px] object-contain shadow-lg rounded">
+                        <img src="{{ $url }}" class="max-w-full max-h-150 object-contain shadow-lg rounded">
                     @elseif($url && str_contains($mime, 'video'))
-                        <video src="{{ $url }}" controls class="max-w-full max-h-[600px] rounded shadow-lg"></video>
+                        <video src="{{ $url }}" controls class="max-w-full max-h-150 rounded shadow-lg"></video>
                     @else
                         <div class="text-center text-gray-400 p-12">
                             <span class="text-6xl block mb-4">📄</span>
@@ -82,6 +84,7 @@
                     @endif
                 </div>
 
+                {{-- Context-aware content actions (publish, unpublish, archive, edit). --}}
                 @if (!$content->deleted_at)
                 <div class="flex justify-between items-center gap-2">
                     @can('publish_content')
@@ -92,7 +95,7 @@
                         </form>
                         <div class="flex justify-center">
                             <x-primary-button form="{{ $content->id }}_publish"
-                                class="flex bg-lime-600 hover:bg-lime-500 !rounded-full p-2">
+                                class="flex bg-lime-600 hover:bg-lime-500 rounded-full! p-2">
                                 {{ __('Publish') }}
                                 <x-icon name="visible" class="size-5 ml-1 font-semibold"/>
                             </x-primary-button>
@@ -105,7 +108,7 @@
                         <div class="flex gap-2">
                             <div class="flex-1">
                                 <x-primary-button form="{{ $content->id }}_unpublish"
-                                    class="flex bg-amber-600 hover:bg-amber-500 !rounded-full p-2">
+                                    class="flex bg-amber-600 hover:bg-amber-500 rounded-full! p-2">
                                     {{ __('Unpublish') }}
                                     <x-icon name="invisible" class="size-5 ml-1 font-semibold"/>
                                 </x-primary-button>
@@ -126,24 +129,26 @@
                             @endcan
                         </div>
                         @elseif ($content->status_id === 3)
-                        <form id="{{ $content->id }}_unarchive" hidden action="{{ route('content.unarchive', ['content_object' => $content]) }}" method="post">
-                            @csrf
-                            @method('patch')
-                        </form>
-                        <div class="flex justify-center">
-                            <button form="{{ $content->id }}_unarchive" type="submit"
-                                class="inline-flex items-center px-4 py-2 font-semibold text-xs uppercase tracking-widest focus:bg-[#D78500] active:bg-[#D78500] focus:outline-none focus:ring-2 focus:ring-[#D78500] 
-                                    focus:ring-offset-2 transition ease-in-out duration-150 bg-yellow-300 hover:bg-yellow-400 focus:text-white active:text-white border-yellow-500 border-2 rounded-full p-2">
-                                {{ __('Unarchive') }}
-                                <x-icon name="archive-up" class="size-5 ml-1 font-semibold"/>
-                            </button>
-                        </div>
+                            @can('manage_archived')
+                                <form id="{{ $content->id }}_unarchive" hidden action="{{ route('content.unarchive', ['content_object' => $content]) }}" method="post">
+                                    @csrf
+                                    @method('patch')
+                                </form>
+                                <div class="flex justify-center">
+                                    <button form="{{ $content->id }}_unarchive" type="submit"
+                                        class="inline-flex items-center px-4 py-2 font-semibold text-xs uppercase tracking-widest focus:bg-[#D78500] active:bg-[#D78500] focus:outline-none focus:ring-2 focus:ring-[#D78500] 
+                                            focus:ring-offset-2 transition ease-in-out duration-150 bg-yellow-300 hover:bg-yellow-400 focus:text-white active:text-white border-yellow-500 border-2 rounded-full p-2">
+                                        {{ __('Unarchive') }}
+                                        <x-icon name="archive-up" class="size-5 ml-1 font-semibold"/>
+                                    </button>
+                                </div>
+                            @endcan
                         @endif
                     @endcan
 
                     @can('update', $content)
                         @if ($content->status_id !== 3)
-                        <x-primary-link href="{{ route('content.edit', $content) }}" class="!p-2 !rounded-full">
+                        <x-primary-link href="{{ route('content.edit', $content) }}" class="p-2! rounded-full!">
                             <x-icon name="pen" class="size-5 mr-2"/>
                             {{ __('Edit') }}
                         </x-primary-link>
