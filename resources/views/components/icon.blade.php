@@ -141,4 +141,9 @@
         <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="{{ $fill }}" stroke-width="{{ $width }}" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     @endif
+    @if ($name === 'arr')
+    <svg viewBox="0 0 24 24" fill="none">
+        <path d="M19 9L12 15L5 9" stroke="{{ $fill }}" stroke-width="{{ $width }}" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    @endif
 </svg>
