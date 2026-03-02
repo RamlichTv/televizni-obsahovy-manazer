@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Generated Tailwind source dump for module templates
+resources/tailwind/module-templates.html
