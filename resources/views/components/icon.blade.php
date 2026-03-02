@@ -1,5 +1,5 @@
 @props([
-    'name',
+    'name' => '',
     'fill' => 'currentColor',
     'width' => '1.75'
 ])
