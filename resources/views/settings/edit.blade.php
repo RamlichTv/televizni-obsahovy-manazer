@@ -1,8 +1,8 @@
 <x-app-layout title="{{ Auth::user()->name }}'s {{ __('profile') }}">
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h1 class="font-semibold text-2xl text-gray-800 leading-tight">
             {{ __('Profile') }}
-        </h2>
+        </h1>
     </x-slot>
 
     <div class="py-12">
