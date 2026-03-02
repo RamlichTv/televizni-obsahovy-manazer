@@ -126,6 +126,11 @@
         <path stroke="{{ $fill }}" stroke-linecap="round" stroke-linejoin="round" stroke-width="{{ $width }}" d="M6 18L18 6M6 6l12 12"/>
     </svg>
     @endif
+    @if ($name === '+')
+    <svg viewBox="0 0 24 24" fill="none">
+        <path d="M15 12L12 12M12 12L9 12M12 12L12 9M12 12L12 15" stroke="{{ $fill }}" stroke-width="{{ $width }}" stroke-linecap="round"/>
+    </svg>
+    @endif
     @if ($name === 'check')
     <svg viewBox="0 0 24 24" fill="none">
         <path d="M5 13L9 17L19 7" stroke="{{ $fill }}" stroke-width="{{ $width }}" stroke-linecap="round" stroke-linejoin="round"/>
