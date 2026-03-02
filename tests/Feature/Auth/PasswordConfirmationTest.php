@@ -10,6 +10,11 @@ class PasswordConfirmationTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Test confirm password screen can be rendered.
+     *
+     * @return void
+     */
     public function test_confirm_password_screen_can_be_rendered(): void
     {
         $user = User::factory()->create();
@@ -19,6 +24,11 @@ class PasswordConfirmationTest extends TestCase
         $response->assertStatus(200);
     }
 
+    /**
+     * Test password can be confirmed.
+     *
+     * @return void
+     */
     public function test_password_can_be_confirmed(): void
     {
         $user = User::factory()->create();
@@ -31,6 +41,11 @@ class PasswordConfirmationTest extends TestCase
         $response->assertSessionHasNoErrors();
     }
 
+    /**
+     * Test password is not confirmed with invalid password.
+     *
+     * @return void
+     */
     public function test_password_is_not_confirmed_with_invalid_password(): void
     {
         $user = User::factory()->create();
@@ -42,3 +57,4 @@ class PasswordConfirmationTest extends TestCase
         $response->assertSessionHasErrors();
     }
 }
+
