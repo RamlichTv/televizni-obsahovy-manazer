@@ -43,6 +43,19 @@
                     {{ __('Edit') }}
                 </x-primary-link>
             @endcan
+            @can('delete', $module)
+                <form
+                    action="{{ route('module.destroy', ['module' => $module]) }}"
+                    method="POST"
+                    onsubmit="return confirm(@js(__('Are you sure you want to delete this module?')))"
+                >
+                    @csrf
+                    @method('DELETE')
+                    <x-danger-button>
+                        {{ __('Delete') }}
+                    </x-danger-button>
+                </form>
+            @endcan
         </div>
     </div>
 
