@@ -1,3 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@config "../../tailwind.config.js";
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+@source "../views/**/*.blade.php";
+@source "../js/**/*.js";
+@source "../tailwind/module-templates.html";
+@source "../../storage/framework/views/*.php";
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
