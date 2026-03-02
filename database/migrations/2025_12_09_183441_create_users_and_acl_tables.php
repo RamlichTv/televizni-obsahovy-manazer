@@ -36,6 +36,7 @@ class CreateUsersAndAclTables extends Migration
         Schema::create('roles', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->unique();
+            $table->string('color', 7)->default('#D0D0D0');
             $table->boolean('is_hidden')->default(false);
             $table->uuid('created_by')->nullable();
             $table->timestamps();

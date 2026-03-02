@@ -10,8 +10,8 @@ class RolePermissionSeeder extends Seeder
     public function run() : void
     {
         $roles = [
-            ['name' => 'Administrator', 'is_hidden' => true, 'created_by' => null],
-            ['name' => 'Mediální Tým',    'is_hidden' => false, 'created_by' => null],
+            ['name' => 'Administrator', 'color' => '#ED4245', 'is_hidden' => true, 'created_by' => null],
+            ['name' => 'Media Team', 'color' => '#5865F2', 'is_hidden' => false, 'created_by' => null],
         ];
 
         $perms = [
@@ -49,7 +49,7 @@ class RolePermissionSeeder extends Seeder
         DB::table('roles')->insert($roles);
         DB::table('permissions')->insert($perms);
 
-        $mediaRoleId = DB::table('roles')->where('name', 'Mediální Tým')->value('id');
+        $mediaRoleId = DB::table('roles')->where('name', 'Media Team')->value('id');
         $mediaPerms = DB::table('permissions')
             ->whereIn('name', [
                 'create_content',
