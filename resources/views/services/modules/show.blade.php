@@ -28,15 +28,49 @@
                 </div>
             </div>
 
-            @can('update', $module)
-                <x-primary-link href="{{ route('module.edit', ['module' => $module, 'revision' => $selectedRevision]) }}">
-                    {{ __('Edit Module') }}
-                </x-primary-link>
-            @endcan
+            <div class="flex items-center gap-2">
+                @can('update', $module)
+                    <x-primary-link href="{{ route('module.edit', ['module' => $module, 'revision' => $selectedRevision]) }}">
+                        {{ __('Edit Module') }}
+                    </x-primary-link>
+                @endcan
+
+                @can('delete', $module)
+                    <form
+                        action="{{ route('module.destroy', ['module' => $module]) }}"
+                        method="POST"
+                        onsubmit="return confirm(@js(__('Are you sure you want to delete this module?')))"
+                    >
+                        @csrf
+                        @method('DELETE')
+                        <x-danger-button>
+                            {{ __('Delete Module') }}
+                        </x-danger-button>
+                    </form>
+                @endcan
+            </div>
         </div>
     </x-slot>
 
     <section class="mx-auto w-full max-w-7xl p-3 md:p-5" x-data="{ sidebarOpen: true, sidebarTab: 'code', codeTab: 'html' }">
+        @if (session('success'))
+            <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if ($errors->has('module'))
+            <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {{ $errors->first('module') }}
+            </div>
+        @endif
+
         <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-col lg:flex-row min-h-[78vh]">
                 

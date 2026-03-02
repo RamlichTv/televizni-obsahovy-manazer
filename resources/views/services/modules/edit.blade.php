@@ -24,6 +24,24 @@
     </x-slot>
 
     <section class="py-6 px-3 md:px-4 space-y-6">
+        @if (session('success'))
+            <div class="mx-auto w-full max-w-7xl rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="mx-auto w-full max-w-7xl rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if ($errors->has('module'))
+            <div class="mx-auto w-full max-w-7xl rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {{ $errors->first('module') }}
+            </div>
+        @endif
+
         <div class="mx-auto w-full max-w-7xl">
             {{-- Shared create/edit module editor --}}
             @include('services.modules.partials.form', [
@@ -53,7 +71,12 @@
                     <p class="mt-1 text-sm text-red-700">
                         {{ __('Deleting module data keeps revision files on disk for audit purposes.') }}
                     </p>
-                    <form action="{{ route('module.destroy', ['module' => $module]) }}" method="POST" class="mt-4">
+                    <form
+                        action="{{ route('module.destroy', ['module' => $module]) }}"
+                        method="POST"
+                        class="mt-4"
+                        onsubmit="return confirm(@js(__('Are you sure you want to delete this module?')))"
+                    >
                         @csrf
                         @method('DELETE')
                         <x-danger-button>
