@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\Avatar\DefaultAvatar;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable
@@ -65,5 +67,29 @@ class User extends Authenticatable
             return true;
 
         return $this->roles->flatMap->permissions->contains('name', $permission);
+    }
+
+    public function avatarPath(): ?string
+    {
+        if ($this->avatar === null || $this->avatar === '') {
+            return null;
+        }
+
+        return 'users/' . $this->username . '/' . $this->avatar;
+    }
+
+    public function avatarUrl(): string
+    {
+        $path = $this->avatarPath();
+        if ($path !== null && Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        return $this->defaultAvatarDataUri();
+    }
+
+    public function defaultAvatarDataUri(): string
+    {
+        return DefaultAvatar::forUser($this);
     }
 }
