@@ -2,8 +2,10 @@
 
 @php
     $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
+
     $path = $meta['path'] ?? null;
     $url = $path ? asset('storage/' . $path) : null;
+
     $mime = $meta['mime_type'] ?? '';
     $author = $content->author;
 @endphp
@@ -71,6 +73,7 @@
                         #{{ $tag->name }}
                     </span>
                 @endforeach
+
                 @if($content->tags->count() > 3)
                     <span class="text-xs text-gray-500">+{{ $content->tags->count() - 3 }}</span>
                 @endif
@@ -87,29 +90,29 @@
                         ?
                     </div>
                 @endif
-                <span class="truncate max-w-[80px]">{{ $author->name ?? 'Unknown' }}</span>
+
+                <span class="truncate max-w-20">{{ $author->name ?? 'Unknown' }}</span>
             </div>
 
             @if (request()->route()->getName() !== 'content.deleted')
-            <div class="flex items-center gap-2">
-                @if ($content->author_id === Auth::user()->id || Auth::user()->can('edit_content'))
-                    {{-- EDIT BUTTON --}}
-                    <a href="{{ route('content.edit', $content) }}" class="relative z-10 s text-[#077CB6] hover:text-[#066a9c] hover:bg-blue-100 px-2 py-1 rounded-md text-sm font-medium">
-                        {{ __('Edit') }}
-                    </a>
-                @endif
-                @can('delete', $content)
-                    <form action="{{ route('content.destroy', $content) }}" method="POST">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="relative z-10 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full p-1 text-sm font-medium">
-                            <x-icon name="trash" class="size-4"/>
-                        </button>
-                    </form>
-                @endcan
-                
+                <div class="flex items-center gap-2">
+                    @if ($content->author_id === Auth::user()->id || Auth::user()->can('edit_content'))
+                        <a href="{{ route('content.edit', $content) }}" class="relative z-10 s text-[#077CB6] hover:text-[#066a9c] hover:bg-blue-100 px-2 py-1 rounded-md text-sm font-medium">
+                            {{ __('Edit') }}
+                        </a>
+                    @endif
+
+                    @can('delete', $content)
+                        <form action="{{ route('content.destroy', $content) }}" method="POST">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="relative z-10 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full p-1 text-sm font-medium">
+                                <x-icon name="trash" class="size-4"/>
+                            </button>
+                        </form>
+                    @endcan
+                </div>
             @endif
-            </div>
         </div>
     </div>
     
