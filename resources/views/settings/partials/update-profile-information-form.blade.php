@@ -68,6 +68,37 @@
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
         </div>
 
+        <div>
+            <x-input-label :value="__('Your ACL (Access Control List)')"/>
+            <div class="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                @if ($user->roles()->count() > 0)
+                <div>
+                    <x-input-label :value="__('Roles')" />
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach ($user->roles as $role)
+                            <x-services.roles.role :role="$role"/>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+    
+                @if ($user->permissions()->count() > 0)
+                <div>
+                    <x-input-label :value="__('Direct Permissions')" />
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach ($user->permissions as $permission)
+                            <x-services.roles.permission :permission="$permission"/>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+    
+                @if ($user->permissions()->count() <= 0 && $user->roles()->count() <= 0)
+                <p class="text-xs text-gray-500">{{ __('No roles or direct permissions assigned. There\'s nothing you can do :/') }}</p>
+                @endif
+            </div>
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 

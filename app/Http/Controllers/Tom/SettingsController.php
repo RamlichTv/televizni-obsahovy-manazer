@@ -14,17 +14,28 @@ use Illuminate\View\View;
 class SettingsController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Show the edit form for the resource.
+     *
+     * @param Request $request
+     * @return View
      */
     public function edit(Request $request): View
     {
+        $user = $request->user()->load([
+            'roles:id,name,color',
+            'permissions:id,name',
+        ]);
+
         return view('settings.edit', [
-            'user' => $request->user(),
+            'user' => $user,
         ]);
     }
 
     /**
-     * Update the user's profile information.
+     * Update the current resource.
+     *
+     * @param SettingsUpdateRequest $request
+     * @return RedirectResponse
      */
     public function update(SettingsUpdateRequest $request): RedirectResponse
     {
@@ -54,7 +65,10 @@ class SettingsController extends Controller
     }
 
     /**
-     * Delete the user's account.
+     * Delete the current resource.
+     *
+     * @param Request $request
+     * @return RedirectResponse
      */
     public function destroy(Request $request): RedirectResponse
     {
