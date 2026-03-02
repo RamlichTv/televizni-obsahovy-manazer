@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 210 297"
+   role="img"
+   aria-label="Default alpha avatar"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="default-alpha.svg"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs5" />
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="4.1188375"
+     inkscape:cx="97.357568"
+     inkscape:cy="174.44242"
+     inkscape:window-width="1920"
+     inkscape:window-height="1052"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5" />
+  <ellipse
+     cx="105"
+     cy="150.22"
+     rx="84.542"
+     ry="84.542"
+     fill="__BACKGROUND__"
+     id="ellipse1" />
+  <g
+     transform="matrix(1.0000063,0,0,1.0000063,51,101.43)"
+     id="g5">
+    <g
+       transform="matrix(0.69058,0,0,0.68847,-3.265,-55.238)"
+       id="g1">
+      <path
+         transform="matrix(1.4481,0,0,1.4525,-68.797,-67.096)"
+         d="m 140.32,186.24 a 51.976,51.817 0 0 1 -35.54,14.007 51.976,51.817 0 0 1 -35.21,-13.7 42.037,69.558 0 0 0 -6.6022,37.147 84.542,84.542 0 0 0 41.811,11.063 84.542,84.542 0 0 0 42.26,-11.32 42.037,69.558 0 0 0 -6.72,-37.197 z"
+         fill="__OBJECT__"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         stroke-width="1.0566"
+         id="path1" />
+    </g>
+    <g
+       transform="matrix(0.69058,0,0,0.68847,-3.265,-39.192)"
+       id="g4">
+      <path
+         transform="translate(9.9554e-7,-23.307)"
+         d="M 151.19,148.5 A 68.267,68.267 0 0 1 82.923,216.767 68.267,68.267 0 0 1 14.656,148.5 68.267,68.267 0 0 1 82.923,80.233 68.267,68.267 0 0 1 151.19,148.5 Z"
+         fill="__OBJECT__"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         stroke-width="0.51684"
+         id="path2" />
+      <rect
+         x="4.7279"
+         y="79.290001"
+         width="156.39"
+         height="91.806999"
+         ry="3.7065001"
+         fill="__OBJECT__"
+         id="rect2" />
+      <rect
+         x="9.6065998"
+         y="84.230003"
+         width="146.63"
+         height="81.927002"
+         ry="10.031"
+         fill="#f1f5f9"
+         id="rect3" />
+      <rect
+         x="15.332"
+         y="90.014"
+         width="135.17999"
+         height="70.5"
+         ry="11.536"
+         fill="__OBJECT__"
+         stroke-width="1.6206"
+         id="rect4" />
+    </g>
+  </g>
+  <text
+     x="103.25507"
+     y="168.99324"
+     fill="#f8fafc"
+     font-family="sans-serif"
+     font-size="49.9558px"
+     font-weight="600"
+     text-anchor="middle"
+     id="text5"
+     transform="scale(1.0168991,0.98338173)"
+     style="stroke-width:0.983382">__TEXT__</text>
+</svg>
