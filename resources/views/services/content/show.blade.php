@@ -171,11 +171,11 @@
                 <div>
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{{ __('Author') }}</h4>
                     <div class="flex items-center gap-3">
-                         @if ($content->author && Storage::disk('public')->exists('users/' . $content->author->username . '/' . $content->author->avatar))
-                            <img src="{{ asset('storage/users/' . $content->author->username . '/' . $content->author->avatar) }}" class="w-10 h-10 rounded-full object-cover shadow-sm">
+                         @if ($content->author)
+                            <img src="{{ $content->author->avatarUrl() }}" class="w-10 h-10 rounded-full object-cover shadow-sm">
                         @else
                             <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-lg">
-                                {{ substr($content->author->name ?? '?', 0, 1) }}
+                                ?
                             </div>
                         @endif
                         <div>
