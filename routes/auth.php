@@ -191,15 +191,25 @@ Route::middleware('auth')->group(function () {
     });
 
     /* ## MODULE ROUTES ## */
-    Route::get('/modules', [ModulesController::class, 'index'])->name('modules.index');
+    Route::get('/modules', [ModulesController::class, 'index'])
+        ->middleware('perms:create_modules,edit_modules,delete_modules,manage_module_categories')
+        ->name('modules.index');
     Route::prefix('module')->name('module.')->group(function () {
         Route::get('/create', [ModulesController::class, 'create'])
             ->middleware('can:create_modules')
             ->name('create');
 
+        Route::match(['post', 'patch'], '/preview', [ModulesController::class, 'preview'])
+            ->middleware('perms:create_modules,edit_modules')
+            ->name('preview');
+
         Route::get('/{module}/edit', [ModulesController::class, 'edit'])
             ->middleware('can:update,module')
             ->name('edit');
+
+        Route::get('/{module}', [ModulesController::class, 'show'])
+            ->middleware('perms:create_modules,edit_modules,delete_modules,manage_module_categories')
+            ->name('show');
 
         Route::post('/', [ModulesController::class, 'store'])
             ->middleware('can:create_modules')
@@ -217,7 +227,6 @@ Route::middleware('auth')->group(function () {
             ->only(['store', 'update', 'destroy'])
             ->middleware('can:manage_module_categories');
     });
-
     /* ## USER MANAGEMENT ROUTES */
     Route::middleware('can:manage_users')->prefix('users')->name('users.')->group(function () {
         Route::get('/', [UsersController::class, 'index'])->name('index');

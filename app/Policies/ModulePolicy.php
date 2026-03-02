@@ -8,21 +8,21 @@ use App\Models\User;
 class ModulePolicy
 {
     /**
-     * Create a new policy instance.
+     * Update the current resource.
+     *
+     * @param User $user
+     * @param Module $module
+     * @return bool
      */
-    public function __construct()
+    public function update(User $user, Module $module): bool
     {
-        //
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Module $module): bool {
         if ($user->hasPermission('edit_modules')) {
+            if ($module->isSystem()) {
+                return $user->isAdmin();
+            }
+
             return true;
-        }
-        else if ($user->id === $module->created_by) {
+        } elseif ($user->id === $module->created_by) {
             return true;
         }
 
@@ -30,9 +30,15 @@ class ModulePolicy
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Delete the current resource.
+     *
+     * @param User $user
+     * @param Module $module
+     * @return bool
      */
-    public function delete(User $user, Module $module): bool {
-        return $user->hasPermission('delete_content');
+    public function delete(User $user, Module $module): bool
+    {
+        return $user->hasPermission('delete_modules') && !$module->isSystem();
     }
 }
+

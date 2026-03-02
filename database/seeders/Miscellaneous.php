@@ -9,13 +9,21 @@ class Miscellaneous extends Seeder
 {
     public function run(): void
     {
-        $module_categories = [
-            ['name' => 'container'],
-            ['name' => 'media'],
-            ['name' => 'document'],
-            ['name' => 'other'],
+        $moduleCategories = [
+            ['name' => 'Widget', 'slug' => 'widget', 'is_widget' => true, 'is_system' => true],
+            ['name' => 'Webpage', 'slug' => 'widget', 'is_widget' => false, 'is_system' => true],
+            ['name' => 'Link', 'slug' => 'widget', 'is_widget' => true, 'is_system' => true],
+            ['name' => 'Container', 'slug' => 'container', 'is_widget' => false, 'is_system' => true],
+            ['name' => 'Carousel', 'slug' => 'carousel', 'is_widget' => false, 'is_system' => true],
+            ['name' => 'List', 'slug' => 'list', 'is_widget' => false, 'is_system' => true],
         ];
 
-        DB::table('module_categories')->insert($module_categories);
+        foreach ($moduleCategories as $category) {
+            DB::table('module_categories')->updateOrInsert(
+                ['slug' => $category['slug']],
+                $category
+            );
+        }
     }
 }
+

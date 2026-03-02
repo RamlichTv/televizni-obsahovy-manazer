@@ -29,20 +29,30 @@ class CreateLayoutTables extends Migration
         Schema::create('module_categories', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
+            $table->string('slug')->unique();
+            $table->boolean('is_widget')->default(false);
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
         });
 
         // MODULES - catalog of blade components
         // ##########################################################
         Schema::create('modules', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->uuid('id')->primary();
             $table->string('name');
-            $table->string('component_name');
             $table->json('config_schema')->nullable();
+            $table->json('default_config')->nullable();
+            $table->json('data_source')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('revision')->default(1);
+            $table->string('template_path')->nullable();
+            $table->string('template_checksum', 64)->nullable();
+            $table->string('style_path')->nullable();
+            $table->string('style_checksum', 64)->nullable();
+            $table->string('script_path')->nullable();
+            $table->string('script_checksum', 64)->nullable();
             $table->uuid('created_by')->nullable();
             $table->unsignedBigInteger('category')->nullable();
-            $table->string('thumbnail_url')->nullable();
-            $table->string('version')->nullable();
             $table->timestamps();
 
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
@@ -100,7 +110,7 @@ class CreateLayoutTables extends Migration
         Schema::create('page_modules', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->bigInteger('page_id')->unsigned();
-            $table->unsignedBigInteger('module_id');
+            $table->uuid('module_id');
             $table->integer('row_index')->unsigned();
             $table->integer('column_index')->unsigned();
             $table->integer('row_span')->unsigned()->default(1);
@@ -121,6 +131,7 @@ class CreateLayoutTables extends Migration
         Schema::dropIfExists('page_rows');
         Schema::dropIfExists('pages');
         Schema::dropIfExists('modules');
+        Schema::dropIfExists('module_categories');
         Schema::dropIfExists('profiles');
     }
 }

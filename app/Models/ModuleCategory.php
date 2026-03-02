@@ -3,13 +3,30 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ModuleCategory extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'is_widget',
+        'is_system',
+    ];
 
-    public function modules() : BelongsToMany {
-        return $this->belongsToMany(Module::class, 'module_categories');
+    protected $casts = [
+        'is_widget' => 'boolean',
+        'is_system' => 'boolean',
+    ];
+
+    /**
+     * Modules.
+     *
+     * @return HasMany
+     */
+    public function modules() : HasMany
+    {
+        return $this->hasMany(Module::class, 'category');
     }
 }
+
