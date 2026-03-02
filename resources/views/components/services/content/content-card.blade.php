@@ -80,11 +80,11 @@
         {{-- Footer of the card (Author + Actions) --}}
         <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
             <div class="text-xs text-gray-500 flex items-center gap-1">
-                @if ($author && Storage::disk('public')->exists('users/' . $author->username . '/' . $author->avatar))
-                    <img src="{{ asset('storage/users/' . $author->username . '/' . $author->avatar) }}" alt="Avatar" class="w-5 h-5 rounded-full object-cover">
+                @if ($author)
+                    <img src="{{ $author->avatarUrl() }}" alt="Avatar" class="w-5 h-5 rounded-full object-cover">
                 @else
                     <div class="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-bold text-gray-700">
-                        {{ substr($author->name ?? '?', 0, 1) }}
+                        ?
                     </div>
                 @endif
                 <span class="truncate max-w-[80px]">{{ $author->name ?? 'Unknown' }}</span>
