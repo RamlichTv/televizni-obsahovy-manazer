@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\Events\EventLogger;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,9 @@ use Illuminate\Validation\ValidationException;
 class LoginRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Determine whether the request is authorized.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -20,9 +23,9 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Get the validation rules for the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array
      */
     public function rules(): array
     {
@@ -33,9 +36,9 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Authenticate.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @return void
      */
     public function authenticate(): void
     {
@@ -43,6 +46,17 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+
+            EventLogger::record(
+                typeName: 'user_login_failed',
+                message: 'Login failed for username "' . (string) $this->input('username') . '".',
+                context: [
+                    'action' => 'auth.login',
+                    'username' => (string) $this->input('username'),
+                    'ip' => (string) $this->ip(),
+                    'reason' => 'invalid_credentials',
+                ],
+            );
 
             throw ValidationException::withMessages([
                 'username' => trans('auth.failed'),
@@ -53,9 +67,9 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Ensure the login request is not rate limited.
+     * Ensure is not rate limited.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @return void
      */
     public function ensureIsNotRateLimited(): void
     {
@@ -67,6 +81,18 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
+        EventLogger::record(
+            typeName: 'user_login_failed',
+            message: 'Login blocked by rate limiter for username "' . (string) $this->input('username') . '".',
+            context: [
+                'action' => 'auth.login',
+                'username' => (string) $this->input('username'),
+                'ip' => (string) $this->ip(),
+                'reason' => 'throttled',
+                'seconds_remaining' => $seconds,
+            ],
+        );
+
         throw ValidationException::withMessages([
             'username' => trans('auth.throttle', [
                 'seconds' => $seconds,
@@ -76,10 +102,13 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Get the rate limiting throttle key for the request.
+     * Throttle key.
+     *
+     * @return string
      */
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('username')).'|'.$this->ip());
     }
 }
+

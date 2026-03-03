@@ -12,7 +12,9 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Create a new resource.
+     *
+     * @return View
      */
     public function create(): View
     {
@@ -20,7 +22,10 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Store a newly created resource.
+     *
+     * @param LoginRequest $request
+     * @return RedirectResponse
      */
     public function store(LoginRequest $request): RedirectResponse
     {
@@ -28,14 +33,43 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $this->logEvent(
+            typeName: 'user_logged_in',
+            message: 'User "' . ($request->user()?->username ?? 'unknown') . '" logged in.',
+            context: [
+                'action' => 'auth.login',
+                'ip' => (string) $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+            ],
+            userId: $request->user()?->id,
+        );
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**
-     * Destroy an authenticated session.
+     * Delete the current resource.
+     *
+     * @param Request $request
+     * @return RedirectResponse
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        if ($user !== null) {
+            $this->logEvent(
+                typeName: 'user_logged_out',
+                message: 'User "' . $user->username . '" logged out.',
+                context: [
+                    'action' => 'auth.logout',
+                    'ip' => (string) $request->ip(),
+                    'user_agent' => (string) $request->userAgent(),
+                ],
+                userId: $user->id,
+            );
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
@@ -45,3 +79,5 @@ class AuthenticatedSessionController extends Controller
         return redirect('/');
     }
 }
+
+
