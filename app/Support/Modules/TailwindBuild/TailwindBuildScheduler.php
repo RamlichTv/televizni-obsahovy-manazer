@@ -11,6 +11,7 @@ class TailwindBuildScheduler
      */
     public function __construct(
         private readonly TailwindBuildStatus $status,
+        private readonly ModuleTailwindSourceDumper $sourceDumper,
     ) {
     }
 
@@ -26,6 +27,8 @@ class TailwindBuildScheduler
         $queue = (string) config('modules.tailwind_build.queue', 'module-builds');
         $delaySeconds = max(0, (int) config('modules.tailwind_build.delay_seconds', 15));
 
+        // Keep the Tailwind scan source current even if the queue worker is temporarily unavailable.
+        $this->sourceDumper->dump();
         $this->status->markQueued();
 
         // The job itself is unique; this dispatch updates status and schedules execution.

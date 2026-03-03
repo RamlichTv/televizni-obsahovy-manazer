@@ -28,7 +28,7 @@ class ModuleTailwindSourceDumper
         }
 
         $disk = Storage::disk('public');
-        $chunks = [$this->renderHeader()];
+        $globalClassSet = [];
 
         $modules = Module::query()
             ->orderBy('name')
@@ -47,17 +47,21 @@ class ModuleTailwindSourceDumper
 
             // Extract unique class tokens and emit small containers that Tailwind can scan reliably.
             $classTokens = $this->extractClassTokens($template);
-            if ($classTokens === []) {
-                continue;
-            }
-
-            $chunks[] = sprintf('<!-- module:%s -->', $module->id);
             foreach ($classTokens as $classToken) {
-                $chunks[] = $this->renderTokenContainer($classToken);
+                $globalClassSet[$classToken] = true;
             }
         }
 
-        $next = implode(PHP_EOL . PHP_EOL, $chunks) . PHP_EOL;
+        $chunks = [$this->renderHeader()];
+        $globalClassTokens = array_keys($globalClassSet);
+        sort($globalClassTokens, SORT_STRING);
+
+        foreach ($globalClassTokens as $classToken) {
+            $chunks[] = $this->renderTokenContainer($classToken);
+        }
+
+        // Single-line separation keeps the generated file compact for faster scans and smaller diffs.
+        $next = implode(PHP_EOL, $chunks) . PHP_EOL;
         $current = File::exists($targetPath) ? (string) File::get($targetPath) : null;
 
         if ($current !== $next) {
@@ -219,4 +223,3 @@ class ModuleTailwindSourceDumper
         return '<div class="' . str_replace('"', '&quot;', $token) . '"></div>';
     }
 }
-
