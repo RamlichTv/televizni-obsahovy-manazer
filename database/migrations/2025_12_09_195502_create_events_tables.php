@@ -30,16 +30,35 @@ class CreateEventsTables extends Migration
         Schema::create('events', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->text('message')->nullable();
-            $table->unsignedBigInteger('type')->nullable();
+            $table->unsignedBigInteger('type_id')->nullable();
             $table->uuid('user_id')->nullable();
             $table->uuid('screen_id')->nullable();
             $table->uuid('related_content')->nullable();
+            $table->uuid('related_profile')->nullable();
+            $table->uuid('related_module')->nullable();
+            $table->unsignedBigInteger('related_role')->nullable();
+            $table->unsignedBigInteger('related_tag')->nullable();
+            $table->unsignedBigInteger('related_content_type')->nullable();
+            $table->unsignedBigInteger('related_module_category')->nullable();
+            $table->unsignedBigInteger('related_page')->nullable();
+            $table->unsignedBigInteger('related_page_module')->nullable();
+            $table->uuid('related_user')->nullable();
+            $table->json('context')->nullable();
             $table->timestamps();
 
-            $table->foreign('type')->references('id')->on('event_types')->onDelete('set null');
+            $table->foreign('type_id')->references('id')->on('event_types')->onDelete('set null');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
             $table->foreign('screen_id')->references('id')->on('screens')->onDelete('set null');
             $table->foreign('related_content')->references('id')->on('content_objects')->onDelete('set null');
+            $table->foreign('related_profile')->references('id')->on('profiles')->onDelete('set null');
+            $table->foreign('related_module')->references('id')->on('modules')->onDelete('set null');
+            $table->foreign('related_role')->references('id')->on('roles')->onDelete('set null');
+            $table->foreign('related_tag')->references('id')->on('tags')->onDelete('set null');
+            $table->foreign('related_content_type')->references('id')->on('content_types')->onDelete('set null');
+            $table->foreign('related_module_category')->references('id')->on('module_categories')->onDelete('set null');
+            $table->foreign('related_page')->references('id')->on('pages')->onDelete('set null');
+            $table->foreign('related_page_module')->references('id')->on('page_modules')->onDelete('set null');
+            $table->foreign('related_user')->references('id')->on('users')->onDelete('set null');
         });
     }
 

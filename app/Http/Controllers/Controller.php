@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Events\EventLogger;
 use Illuminate\Support\Facades\Log;
 
 abstract class Controller
@@ -25,6 +26,15 @@ abstract class Controller
         ?string $screenId = null,
         ?string $relatedContentId = null
     ): void {
+        EventLogger::record(
+            typeName: $typeName,
+            message: $message,
+            context: $context,
+            userId: $userId,
+            screenId: $screenId,
+            relatedContentId: $relatedContentId,
+        );
+
         Log::info($message, [
             'event_type' => $typeName,
             'context' => $context,
