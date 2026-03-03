@@ -32,16 +32,29 @@ class CreateScreensAndTypesTables extends Migration
             $table->timestamps();
         });
 
+        // floors
+        // ##########################################################
+        Schema::create('floors', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('building_id');
+            $table->string('name');
+            $table->timestamps();
+
+            $table->foreign('building_id')->references('id')->on('buildings')->onDelete('cascade');
+            $table->unique(['building_id', 'name']);
+        });
+
         // rooms
         // ##########################################################
         Schema::create('rooms', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('building_id')->nullable();
+            $table->unsignedBigInteger('floor_id')->nullable();
             $table->string('name');
-            $table->string('floor')->nullable();
             $table->timestamps();
 
             $table->foreign('building_id')->references('id')->on('buildings')->onDelete('set null');
+            $table->foreign('floor_id')->references('id')->on('floors')->onDelete('set null');
         });
 
         // SCREENS
@@ -60,6 +73,8 @@ class CreateScreensAndTypesTables extends Migration
             $table->boolean('is_interactive')->default(false);
             $table->timestamp('last_seen_at')->nullable();
             $table->integer('auto_refresh_interval')->nullable();
+            $table->json('ip_whitelist')->nullable();
+            $table->json('ip_blacklist')->nullable();
             $table->timestamps();
 
             $table->foreign('profile_id')->references('id')->on('profiles')->onDelete('set null');
@@ -73,6 +88,7 @@ class CreateScreensAndTypesTables extends Migration
     {
         Schema::dropIfExists('screens');
         Schema::dropIfExists('rooms');
+        Schema::dropIfExists('floors');
         Schema::dropIfExists('buildings');
         Schema::dropIfExists('orientation_types');
         Schema::dropIfExists('status_types');
