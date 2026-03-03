@@ -29,6 +29,8 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     /* ## NORMAL USER ## */
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/edit', [DashboardController::class, 'edit'])->name('dashboard.edit');
+    Route::patch('/dashboard', [DashboardController::class, 'update'])->name('dashboard.update');
 
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
