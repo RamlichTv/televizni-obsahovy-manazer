@@ -17,19 +17,53 @@ class Profile extends Model
 
     protected $fillable = [
         'name',
-        'grid_rows',
-        'grid_columns',
+        'slug',
+        'description',
+        'version',
+        'settings',
+        'created_by',
     ];
 
+    protected $casts = [
+        'settings' => 'array',
+    ];
+
+    /**
+     * Booted.
+     *
+     * @return void
+     */
     protected static function booted() : void {
         static::creating(fn ($m) => $m->id ??= (string) Str::uuid());
     }
 
+    /**
+     * Pages.
+     *
+     * @return HasMany
+     */
     public function pages() : HasMany {
-        return $this->hasMany(Page::class);
+        return $this->hasMany(Page::class)->orderBy('order')->orderBy('id');
     }
 
-    public function createdBy() : BelongsTo {
-        return $this->belongsTo(User::class);
+    /**
+     * Created by.
+     *
+     * @return BelongsTo
+     */
+    public function createdBy() : BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Screens.
+     *
+     * @return HasMany
+     */
+    public function screens() : HasMany
+    {
+        return $this->hasMany(Screen::class);
     }
 }
+

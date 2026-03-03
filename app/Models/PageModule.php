@@ -10,22 +10,41 @@ class PageModule extends Model
     protected $fillable = [
         'page_id',
         'module_id',
-        'row_start',
+        'row_index',
+        'column_index',
         'row_span',
-        'col_start',
-        'col_span',
-        'config',
+        'column_span',
+        'config_overrides',
+        'order',
     ];
 
     protected $casts = [
-        'config' => 'array',
+        'row_index' => 'integer',
+        'column_index' => 'integer',
+        'row_span' => 'integer',
+        'column_span' => 'integer',
+        'order' => 'integer',
+        'config_overrides' => 'array',
     ];
 
-    public function page() : BelongsTo {
+    /**
+     * Page.
+     *
+     * @return BelongsTo
+     */
+    public function page() : BelongsTo
+    {
         return $this->belongsTo(Page::class);
     }
 
-    public function module() : BelongsTo {
+    /**
+     * Module.
+     *
+     * @return BelongsTo
+     */
+    public function module() : BelongsTo
+    {
         return $this->belongsTo(Module::class);
     }
 }
+
