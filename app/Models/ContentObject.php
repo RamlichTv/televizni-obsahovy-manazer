@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ContentObject extends Model
@@ -90,5 +91,53 @@ class ContentObject extends Model
      */
     public function status() : BelongsTo {
         return $this->belongsTo(ContentStatus::class);
+    }
+
+    /**
+     * File path relative to the public disk root.
+     *
+     * Supports legacy values that were saved as "/storage/...".
+     *
+     * @return string|null
+     */
+    public function filePath() : ?string
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        $rawPath = trim((string) ($meta['path'] ?? ''));
+        if ($rawPath === '') {
+            return null;
+        }
+
+        if (filter_var($rawPath, FILTER_VALIDATE_URL)) {
+            return $rawPath;
+        }
+
+        $path = ltrim($rawPath, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = Str::after($path, 'storage/');
+        }
+
+        return $path !== '' ? $path : null;
+    }
+
+    /**
+     * Public URL for the stored file.
+     *
+     * @return string|null
+     */
+    public function fileUrl() : ?string
+    {
+        $path = $this->filePath();
+        if ($path === null) {
+            return null;
+        }
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        return Storage::disk('public')->exists($path)
+            ? asset('storage/' . $path)
+            : null;
     }
 }

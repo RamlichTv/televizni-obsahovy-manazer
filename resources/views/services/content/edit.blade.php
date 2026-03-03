@@ -63,8 +63,7 @@
                 @if ($content->type->is_file)
                 @php
                     $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
-                    $path = $meta['path'] ?? null;
-                    $url = $path ? asset('storage/' . $path) : null;
+                    $url = $content->fileUrl();
                     $mime = $meta['mime_type'] ?? '';
                 @endphp
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"

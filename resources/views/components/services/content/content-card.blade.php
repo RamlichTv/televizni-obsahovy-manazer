@@ -3,8 +3,7 @@
 @php
     $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
 
-    $path = $meta['path'] ?? null;
-    $url = $path ? asset('storage/' . $path) : null;
+    $url = $content->fileUrl();
 
     $mime = $meta['mime_type'] ?? '';
     $author = $content->author;

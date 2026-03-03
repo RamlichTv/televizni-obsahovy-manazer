@@ -30,9 +30,7 @@
         <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             @foreach ($items as $item)
                 @php
-                    $meta = is_array($item->meta) ? $item->meta : [];
-                    $path = $meta['path'] ?? null;
-                    $url = $path ? asset('storage/' . $path) : null;
+                    $url = $item->fileUrl();
                 @endphp
 
                 <article class="min-w-55 max-w-55 snap-start overflow-hidden rounded-lg border border-gray-200 bg-white">

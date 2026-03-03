@@ -169,7 +169,8 @@ class ContentController extends Controller
                 'original_filename' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
-                'path' => '/storage/' . $path // storage/content/uuid.jpg
+                // Store a disk-relative path (public disk root), never a full URL.
+                'path' => $path
             ];
             
             $content->update(['meta' => $meta]);
