@@ -26,6 +26,7 @@ class CreateUsersAndAclTables extends Migration
             $table->string('username')->unique();
             $table->string('email')->unique();
             $table->string('avatar')->nullable();
+            $table->json('dashboard_layout')->nullable();
             $table->string('password');
             $table->timestamps();
             $table->softDeletes();
