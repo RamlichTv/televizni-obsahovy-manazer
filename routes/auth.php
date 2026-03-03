@@ -15,6 +15,7 @@ use App\Http\Controllers\Tom\Services\PagesController;
 use App\Http\Controllers\Tom\Services\ProfilesController;
 use App\Http\Controllers\Tom\Services\RolesController;
 use App\Http\Controllers\Tom\Services\Screen\BuildingsController;
+use App\Http\Controllers\Tom\Services\Screen\FloorsController;
 use App\Http\Controllers\Tom\Services\Screen\RoomsController;
 use App\Http\Controllers\Tom\Services\ScreensController;
 use App\Http\Controllers\Tom\Services\UsersController;
@@ -136,10 +137,16 @@ Route::middleware('auth')->group(function () {
             Route::get('/create', [ScreensController::class, 'create'])->name('create');
             Route::post('/', [ScreensController::class, 'store'])->name('store');
 
-            Route::get('/{screen}/edit', [ScreensController::class, 'edit'])->name('edit');
-            Route::patch('/{screen}', [ScreensController::class, 'update'])->name('update');
+            Route::get('/{screen}/edit', [ScreensController::class, 'edit'])
+                ->whereUuid('screen')
+                ->name('edit');
+            Route::patch('/{screen}', [ScreensController::class, 'update'])
+                ->whereUuid('screen')
+                ->name('update');
 
-            Route::delete('/{screen}', [ScreensController::class, 'destroy'])->name('destroy');
+            Route::delete('/{screen}', [ScreensController::class, 'destroy'])
+                ->whereUuid('screen')
+                ->name('destroy');
         });
 
         // ## Rooms
@@ -148,6 +155,14 @@ Route::middleware('auth')->group(function () {
             Route::post('/', [RoomsController::class, 'store'])->name('store');
             Route::patch('/{room}', [RoomsController::class, 'update'])->name('update');
             Route::delete('/{room}', [RoomsController::class, 'destroy'])->name('destroy');
+        });
+
+        // ## Floors
+        Route::get('/floors', [FloorsController::class, 'index'])->name('floors.index');
+        Route::prefix('floor')->name('floor.')->group(function () {
+            Route::post('/', [FloorsController::class, 'store'])->name('store');
+            Route::patch('/{floor}', [FloorsController::class, 'update'])->name('update');
+            Route::delete('/{floor}', [FloorsController::class, 'destroy'])->name('destroy');
         });
         
         // ## Buildings
