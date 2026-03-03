@@ -15,7 +15,7 @@ class EventTypesSeeder extends Seeder
             ['name' => 'warning'],
             ['name' => 'critical'],
         ];
-        DB::table('severity_types')->insert($severity);
+        DB::table('severity_types')->upsert($severity, ['name'], ['name']);
 
         $sev = DB::table('severity_types')->pluck('id', 'name');
 
@@ -24,7 +24,9 @@ class EventTypesSeeder extends Seeder
             ['name' => 'content_created',   'severity' => $sev['notice']],
             ['name' => 'content_modified',  'severity' => $sev['info']],
             ['name' => 'content_published', 'severity' => $sev['notice']],
+            ['name' => 'content_unpublished', 'severity' => $sev['info']],
             ['name' => 'content_archived',  'severity' => $sev['info']],
+            ['name' => 'content_unarchived', 'severity' => $sev['info']],
             ['name' => 'content_deleted',   'severity' => $sev['warning']],
 
             // Content types
@@ -34,6 +36,7 @@ class EventTypesSeeder extends Seeder
 
             // Screens
             ['name' => 'screen_created',         'severity' => $sev['notice']],
+            ['name' => 'screen_updated',         'severity' => $sev['info']],
             ['name' => 'screen_online',          'severity' => $sev['info']],
             ['name' => 'screen_offline',         'severity' => $sev['warning']],
             ['name' => 'screen_profile_changed', 'severity' => $sev['notice']],
@@ -51,12 +54,14 @@ class EventTypesSeeder extends Seeder
 
             // Module categories
             ['name' => 'module_category_created', 'severity' => $sev['notice']],
-            ['name' => 'module_category_assigned',  'severity' => $sev['info']],
+            ['name' => 'module_category_assigned', 'severity' => $sev['info']],
+            ['name' => 'module_category_edited', 'severity' => $sev['info']],
             ['name' => 'module_category_deleted', 'severity' => $sev['notice']],
 
             // Tags
             ['name' => 'tag_created',  'severity' => $sev['notice']],
             ['name' => 'tag_attached', 'severity' => $sev['info']],
+            ['name' => 'tag_detached', 'severity' => $sev['info']],
             ['name' => 'tag_deleted',  'severity' => $sev['notice']],
 
             /// ACL
@@ -72,12 +77,14 @@ class EventTypesSeeder extends Seeder
             ['name' => 'user_created', 'severity' => $sev['notice']],
             ['name' => 'user_logged_in', 'severity' => $sev['info']],
             ['name' => 'user_logged_out', 'severity' => $sev['info']],
+            ['name' => 'user_login_failed', 'severity' => $sev['warning']],
             ['name' => 'user_edited',  'severity' => $sev['info']],
             ['name' => 'user_deleted', 'severity' => $sev['critical']],
 
             // Security
             ['name' => 'database_accessed', 'severity' => $sev['critical']],
+            ['name' => 'operation_failed', 'severity' => $sev['warning']],
         ];
-        DB::table('event_types')->insert($types);
+        DB::table('event_types')->upsert($types, ['name'], ['severity']);
     }
 }
