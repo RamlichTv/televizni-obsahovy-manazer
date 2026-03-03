@@ -72,6 +72,7 @@ return [
         'i',
         'input',
         'img',
+        'label',
         'li',
         'line',
         'main',
