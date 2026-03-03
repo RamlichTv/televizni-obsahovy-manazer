@@ -105,6 +105,7 @@ return [
         'aria-*',
         'class',
         'colspan',
+        'controls',
         'cx',
         'cy',
         'data-*',
