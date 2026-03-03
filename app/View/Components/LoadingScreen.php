@@ -9,15 +9,9 @@ use Illuminate\View\Component;
 class LoadingScreen extends Component
 {
     /**
-     * Create a new component instance.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
-     * Get the view / contents that represent the component.
+     * Render the associated view output.
+     *
+     * @return View|Closure|string
      */
     public function render(): View|Closure|string
     {
