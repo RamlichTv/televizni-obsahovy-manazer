@@ -1,4 +1,5 @@
 import './bootstrap';
+import './services/dashboard/layout-editor';
 import './services/profiles/layout-editor';
 import './services/profiles/preview';
 import { moduleFormEditor } from './services/modules/form-editor';
