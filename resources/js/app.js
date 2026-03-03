@@ -1,4 +1,6 @@
 import './bootstrap';
+import './services/profiles/layout-editor';
+import './services/profiles/preview';
 import { moduleFormEditor } from './services/modules/form-editor';
 
 import Alpine from 'alpinejs';
