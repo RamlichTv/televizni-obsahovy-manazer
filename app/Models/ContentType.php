@@ -18,6 +18,11 @@ class ContentType extends Model
         'extension_whitelist' => 'array',
     ];
 
+    /**
+     * Content objects.
+     *
+     * @return HasOne
+     */
     public function content_objects() : HasOne {
         return $this->hasOne(ContentObject::class, 'type_id');
     }

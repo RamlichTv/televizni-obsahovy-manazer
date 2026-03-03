@@ -38,26 +38,56 @@ class ContentObject extends Model
         'archived_at' => 'datetime'
     ];
 
+    /**
+     * Booted.
+     *
+     * @return void
+     */
     protected static function booted() : void {
         static::creating(fn ($m) => $m->id ??= (string) Str::uuid());
     }
 
+    /**
+     * Type.
+     *
+     * @return BelongsTo
+     */
     public function type() : BelongsTo {
         return $this->belongsTo(ContentType::class, 'type_id');
     }
 
+    /**
+     * Author.
+     *
+     * @return BelongsTo
+     */
     public function author() : BelongsTo {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Events.
+     *
+     * @return HasMany
+     */
     public function events() : HasMany {
         return $this->hasMany(Event::class, 'related_content');
     }
 
+    /**
+     * Tags.
+     *
+     * @return BelongsToMany
+     */
     public function tags() : BelongsToMany {
         return $this->belongsToMany(Tag::class, 'content_tags');
     }
 
+    /**
+     * Status.
+     *
+     * @return BelongsTo
+     */
     public function status() : BelongsTo {
         return $this->belongsTo(ContentStatus::class);
     }

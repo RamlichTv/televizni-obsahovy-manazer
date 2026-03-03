@@ -9,6 +9,11 @@ class SeverityType extends Model
 {
     protected $fillable = [];
 
+    /**
+     * Event types.
+     *
+     * @return HasMany
+     */
     public function eventTypes() : HasMany
     {
         return $this->hasMany(EventType::class, 'severity');

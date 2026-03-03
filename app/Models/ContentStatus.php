@@ -9,6 +9,11 @@ class ContentStatus extends Model
 {
     protected $fillable = [];
 
+    /**
+     * Content objects.
+     *
+     * @return HasMany
+     */
     public function contentObjects() : HasMany {
         return $this->hasMany(ContentObject::class, 'status_id');
     }

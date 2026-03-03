@@ -9,7 +9,9 @@ use Illuminate\Http\UploadedFile;
 class ContentObjectRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Determine whether the request is authorized.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -17,9 +19,9 @@ class ContentObjectRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Get the validation rules for the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array
      */
     public function rules(): array
     {
@@ -63,6 +65,13 @@ class ContentObjectRequest extends FormRequest
         ];
     }
 
+    /**
+     * File matches any rule.
+     *
+     * @param UploadedFile $file
+     * @param array $rules
+     * @return bool
+     */
     private function fileMatchesAnyRule(UploadedFile $file, array $rules): bool
     {
         $mime = strtolower((string) $file->getMimeType());
@@ -88,6 +97,13 @@ class ContentObjectRequest extends FormRequest
         return false;
     }
 
+    /**
+     * Mime matches rule.
+     *
+     * @param string $mime
+     * @param string $rule
+     * @return bool
+     */
     private function mimeMatchesRule(string $mime, string $rule): bool
     {
         if ($mime === '') {
