@@ -283,6 +283,7 @@ Route::middleware('auth')->group(function () {
             ->only(['store', 'update', 'destroy'])
             ->middleware('can:manage_module_categories');
     });
+    
     /* ## USER MANAGEMENT ROUTES */
     Route::middleware('can:manage_users')->prefix('users')->name('users.')->group(function () {
         Route::get('/', [UsersController::class, 'index'])->name('index');
