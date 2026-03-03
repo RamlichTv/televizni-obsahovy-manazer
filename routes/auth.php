@@ -11,6 +11,7 @@ use App\Http\Controllers\Tom\Services\Content\ContentTypeController;
 use App\Http\Controllers\Tom\Services\ContentController;
 use App\Http\Controllers\Tom\Services\Module\ModuleCategoriesController;
 use App\Http\Controllers\Tom\Services\ModulesController;
+use App\Http\Controllers\Tom\Services\PagesController;
 use App\Http\Controllers\Tom\Services\ProfilesController;
 use App\Http\Controllers\Tom\Services\RolesController;
 use App\Http\Controllers\Tom\Services\Screen\BuildingsController;
@@ -163,11 +164,6 @@ Route::middleware('auth')->group(function () {
         ->middleware('perms:create_profiles,edit_profiles,delete_profiles')
         ->name('profiles.index');
     Route::prefix('profile')->name('profile.')->group(function () {
-        // ## Viewing
-        Route::get('/{profile}', [ProfilesController::class, 'show'])
-            ->middleware('perms:create_profiles,edit_profiles,delete_profiles')
-            ->name('show');
-
         // ## Creating
         Route::get('/create', [ProfilesController::class, 'create'])
             ->middleware('can:create_profiles')
@@ -175,17 +171,60 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [ProfilesController::class, 'store'])
             ->middleware('can:create_profiles')
             ->name('store');
+
+        // ## Viewing
+        Route::get('/{profile}', [ProfilesController::class, 'show'])
+            ->whereUuid('profile')
+            ->middleware('can:view,profile')
+            ->name('show');
         
         // ## Editing
         Route::get('/{profile}/edit', [ProfilesController::class, 'edit'])
+            ->whereUuid('profile')
             ->middleware('can:update,profile')
             ->name('edit');
         Route::patch('/{profile}', [ProfilesController::class, 'update'])
+            ->whereUuid('profile')
             ->middleware('can:update,profile')
             ->name('update');
+
+        // ## Profile pages
+        Route::post('/{profile}/pages', [PagesController::class, 'store'])
+            ->whereUuid('profile')
+            ->middleware('can:update,profile')
+            ->name('pages.store');
+        Route::patch('/{profile}/pages/{page}', [PagesController::class, 'update'])
+            ->whereUuid('profile')
+            ->whereNumber('page')
+            ->middleware('can:update,profile')
+            ->name('pages.update');
+        Route::delete('/{profile}/pages/{page}', [PagesController::class, 'destroy'])
+            ->whereUuid('profile')
+            ->whereNumber('page')
+            ->middleware('can:update,profile')
+            ->name('pages.destroy');
+
+        Route::post('/{profile}/pages/{page}/modules', [PagesController::class, 'storeModule'])
+            ->whereUuid('profile')
+            ->whereNumber('page')
+            ->middleware('can:update,profile')
+            ->name('pages.modules.store');
+        Route::patch('/{profile}/pages/{page}/modules/{placement}', [PagesController::class, 'updateModule'])
+            ->whereUuid('profile')
+            ->whereNumber('page')
+            ->whereNumber('placement')
+            ->middleware('can:update,profile')
+            ->name('pages.modules.update');
+        Route::delete('/{profile}/pages/{page}/modules/{placement}', [PagesController::class, 'destroyModule'])
+            ->whereUuid('profile')
+            ->whereNumber('page')
+            ->whereNumber('placement')
+            ->middleware('can:update,profile')
+            ->name('pages.modules.destroy');
         
         // ## Deleting
         Route::delete('/{profile}', [ProfilesController::class, 'destroy'])
+            ->whereUuid('profile')
             ->middleware('can:delete,profile')
             ->name('destroy');
     });
