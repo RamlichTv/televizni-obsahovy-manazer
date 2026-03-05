@@ -68,7 +68,7 @@
             </div>
 
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div class="md:col-span-2 rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="md:col-span-2 rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="name" :value="__('Screen Name')" :required="true" />
                     <x-text-input
                         id="name"
@@ -81,7 +81,7 @@
                     <x-input-error class="mt-2" :messages="$errors->get('name')" />
                 </div>
 
-                <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="hardware_id" :value="__('Hardware ID')" />
                     <x-text-input
                         id="hardware_id"
@@ -95,7 +95,7 @@
                 </div>
 
                 @if ($isEdit)
-                    <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                    <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                         <x-input-label for="status_id" :value="__('Status')" :required="true" />
                         <x-select id="status_id" name="status_id" required>
                             @foreach ($statuses as $status)
@@ -109,7 +109,7 @@
                     </div>
                 @endif
 
-                <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="profile_id" :value="__('Assigned Profile')" />
                     <x-select id="profile_id" name="profile_id">
                         <option value="">{{ __('No profile assigned') }}</option>
@@ -122,7 +122,7 @@
                     <x-input-error class="mt-2" :messages="$errors->get('profile_id')" />
                 </div>
 
-                <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="room_id" :value="__('Room')" />
                     <x-select id="room_id" name="room_id">
                         <option value="">{{ __('No room assigned') }}</option>
@@ -144,7 +144,7 @@
                     <x-input-error class="mt-2" :messages="$errors->get('room_id')" />
                 </div>
 
-                <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="orientation_id" :value="__('Orientation')" />
                     <x-select id="orientation_id" name="orientation_id">
                         <option value="">{{ __('No orientation') }}</option>
@@ -157,7 +157,7 @@
                     <x-input-error class="mt-2" :messages="$errors->get('orientation_id')" />
                 </div>
 
-                <div class="md:col-span-2 rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="md:col-span-2 rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Pixel Size') }}</p>
                     <div class="mt-2 grid grid-cols-2 gap-3">
                         <div>
@@ -191,7 +191,7 @@
                     <p class="mt-2 text-xs text-slate-500">{{ __('Used as the playback canvas size in monitor mode.') }}</p>
                 </div>
 
-                <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="auto_refresh_interval" :value="__('Auto Refresh (seconds)')" />
                     <x-text-input
                         id="auto_refresh_interval"
@@ -206,7 +206,7 @@
                     <x-input-error class="mt-2" :messages="$errors->get('auto_refresh_interval')" />
                 </div>
 
-                <div class="rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <label for="is_interactive" class="cursor-pointer flex items-center justify-between gap-3">
                         <div>
                             <p class="text-sm font-semibold text-slate-900">{{ __('Interactive Screen') }}</p>
@@ -228,13 +228,13 @@
                     <x-input-error class="mt-2" :messages="$errors->get('is_interactive')" />
                 </div>
 
-                <div class="md:col-span-2 rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="md:col-span-2 rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <x-input-label for="description" :value="__('Description')" />
                     <x-textarea id="description" name="description" rows="3" class="mt-1 block w-full">{{ old('description', $isEdit ? $screen->description : '') }}</x-textarea>
                     <x-input-error class="mt-2" :messages="$errors->get('description')" />
                 </div>
 
-                <div class="md:col-span-2 rounded-xl border border-[#444444] bg-[#ffffff] p-3">
+                <div class="md:col-span-2 rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
                     <h3 class="text-sm font-semibold text-slate-900">{{ __('Network Access') }}</h3>
                     <p class="mt-1 text-xs text-slate-500">{{ __('Whitelist restricts access. Blacklist always denies.') }}</p>
 
@@ -272,7 +272,7 @@
         </div>
 
         <div class="mx-auto mt-2 h-1.5 w-24 rounded-full bg-[#444444]"></div>
-        <div class="mx-auto mt-0.5 h-2.5 w-36 rounded-full bg-[#343434]"></div>
+        <div class="mx-auto mt-0.5 h-2.5 w-36 rounded-full bg-[#525252]"></div>
     </div>
 
     <div class="flex items-center justify-end gap-2 border-t border-gray-200 pt-4">
