@@ -30,8 +30,125 @@
         </div>
     </x-slot>
 
+    @php
+        $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
+        $fileItems = collect($content->fileItems());
+        $totalFileSizeBytes = (int) $fileItems->sum(fn ($file) => (int) ($file['size'] ?? 0));
+    @endphp
+
     {{-- Layout Container --}}
-    <div class="flex flex-col lg:flex-row h-[calc(100vh-180px)] overflow-hidden" x-data="{ sidebarOpen: true }">
+    <div
+        class="flex flex-col lg:flex-row h-[calc(100vh-180px)] overflow-hidden"
+        x-data="{
+            sidebarOpen: true,
+            zoomOpen: false,
+            zoomImage: '',
+            zoomTitle: '',
+            zoomScale: 1,
+            panX: 0,
+            panY: 0,
+            isPanning: false,
+            pointerStartX: 0,
+            pointerStartY: 0,
+            panStartX: 0,
+            panStartY: 0,
+            panHasMoved: false,
+            openZoom(imageUrl, imageTitle = '') {
+                this.zoomImage = imageUrl;
+                this.zoomTitle = imageTitle;
+                this.zoomScale = 1;
+                this.panX = 0;
+                this.panY = 0;
+                this.isPanning = false;
+                this.panHasMoved = false;
+                this.zoomOpen = true;
+            },
+            closeZoom() {
+                this.zoomOpen = false;
+                this.zoomImage = '';
+                this.zoomTitle = '';
+                this.zoomScale = 1;
+                this.panX = 0;
+                this.panY = 0;
+                this.isPanning = false;
+                this.panHasMoved = false;
+            },
+            zoomIn() {
+                this.zoomScale = Math.min(4, this.zoomScale + 0.25);
+            },
+            zoomOut() {
+                this.zoomScale = Math.max(1, this.zoomScale - 0.25);
+                if (this.zoomScale === 1) {
+                    this.panX = 0;
+                    this.panY = 0;
+                }
+            },
+            resetZoom() {
+                this.zoomScale = 1;
+                this.panX = 0;
+                this.panY = 0;
+            },
+            handleZoomWheel(event) {
+                if (!this.zoomOpen) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (event.deltaY < 0) {
+                    this.zoomIn();
+                    return;
+                }
+
+                this.zoomOut();
+            },
+            startPan(event) {
+                if (!this.zoomOpen || this.zoomScale <= 1) {
+                    return;
+                }
+
+                this.isPanning = true;
+                this.panHasMoved = false;
+                this.pointerStartX = event.clientX;
+                this.pointerStartY = event.clientY;
+                this.panStartX = this.panX;
+                this.panStartY = this.panY;
+            },
+            continuePan(event) {
+                if (!this.isPanning) {
+                    return;
+                }
+
+                const deltaX = event.clientX - this.pointerStartX;
+                const deltaY = event.clientY - this.pointerStartY;
+                if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+                    this.panHasMoved = true;
+                }
+
+                this.panX = this.panStartX + deltaX;
+                this.panY = this.panStartY + deltaY;
+            },
+            stopPan() {
+                this.isPanning = false;
+            },
+            handleZoomCanvasClick() {
+                if (this.panHasMoved) {
+                    this.panHasMoved = false;
+                    return;
+                }
+
+                if (this.zoomScale < 4) {
+                    this.zoomIn();
+                    return;
+                }
+
+                this.resetZoom();
+            },
+            zoomTransformStyle() {
+                return 'transform: translate(' + this.panX + 'px, ' + this.panY + 'px) scale(' + this.zoomScale + '); transform-origin: center center;';
+            }
+        }"
+        @keydown.escape.window="closeZoom"
+    >
         
         {{-- MAIN SECTION (Center) --}}
         <div class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
@@ -46,25 +163,80 @@
                 @if ($content->type->is_file)
                     
                 {{-- Content preview --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-75 flex items-center justify-center relative group">
-                    {{-- Resolve storage metadata used by preview and file details. --}}
-                    @php
-                        $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
-                        $url = $content->fileUrl();
-                        $mime = $meta['mime_type'] ?? '';
-                    @endphp
-
-                    @if($url && str_contains($mime, 'image'))
-                        <img src="{{ $url }}" class="max-w-full max-h-150 object-contain shadow-lg rounded">
-                    @elseif($url && str_contains($mime, 'video'))
-                        <video src="{{ $url }}" controls class="max-w-full max-h-150 rounded shadow-lg"></video>
-                    @else
-                        <div class="text-center text-gray-400 p-12">
-                            <span class="text-6xl block mb-4">📄</span>
-                            <span class="text-lg">No preview available for this file type.</span>
-                            <div class="mt-4">
-                                <a href="{{ $url }}" target="_blank" class="text-[#077CB6] underline">Download File</a>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-75 relative group p-6">
+                    @if ($content->type->multiple_file)
+                        @if ($fileItems->isEmpty())
+                            <div class="flex min-h-48 items-center justify-center text-center text-gray-400">
+                                {{ __('No files are available for this content.') }}
                             </div>
+                        @else
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                @foreach ($fileItems as $file)
+                                    @php
+                                        $itemUrl = (string) ($file['url'] ?? '');
+                                        $itemMime = strtolower((string) ($file['mime_type'] ?? ''));
+                                        $itemName = (string) ($file['original_filename'] ?? '');
+                                    @endphp
+
+                                    <article class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                        @if ($itemUrl !== '' && str_starts_with($itemMime, 'image/'))
+                                            <button
+                                                type="button"
+                                                class="block w-full rounded focus:outline-none focus:ring-2 focus:ring-[#077CB6]"
+                                                @click='openZoom(@json($itemUrl), @json($itemName))'
+                                                title="{{ __('Click to zoom') }}"
+                                            >
+                                                <img src="{{ $itemUrl }}" alt="{{ $itemName }}" class="h-48 w-full rounded object-cover hover:opacity-90 transition">
+                                            </button>
+                                            <p class="mt-1 text-[11px] text-gray-500">{{ __('Click image to zoom') }}</p>
+                                        @elseif ($itemUrl !== '' && str_starts_with($itemMime, 'video/'))
+                                            <video src="{{ $itemUrl }}" controls class="h-48 w-full rounded object-cover"></video>
+                                        @else
+                                            <div class="flex h-48 items-center justify-center rounded border border-dashed border-gray-300 bg-white text-center text-sm text-gray-500">
+                                                <a href="{{ $itemUrl }}" target="_blank" class="text-[#077CB6] underline">{{ __('Download file') }}</a>
+                                            </div>
+                                        @endif
+
+                                        <p class="mt-2 truncate text-xs text-gray-600" title="{{ $itemName }}">
+                                            {{ $itemName !== '' ? $itemName : __('Unnamed file') }}
+                                        </p>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @endif
+                    @else
+                        @php
+                            $primaryFile = $fileItems->first();
+                            $url = (string) ($primaryFile['url'] ?? '');
+                            $mime = strtolower((string) ($primaryFile['mime_type'] ?? ''));
+                        @endphp
+
+                        <div class="flex min-h-75 items-center justify-center">
+                            @if ($url !== '' && str_starts_with($mime, 'image/'))
+                                <div class="flex flex-col items-center">
+                                    <button
+                                        type="button"
+                                        class="focus:outline-none focus:ring-2 focus:ring-[#077CB6] rounded"
+                                        @click='openZoom(@json($url), @json($content->name))'
+                                        title="{{ __('Click to zoom') }}"
+                                    >
+                                        <img src="{{ $url }}" class="max-w-full max-h-150 object-contain shadow-lg rounded hover:opacity-90 transition">
+                                    </button>
+                                    <p class="mt-2 text-xs text-gray-500">{{ __('Click image to zoom') }}</p>
+                                </div>
+                            @elseif ($url !== '' && str_starts_with($mime, 'video/'))
+                                <video src="{{ $url }}" controls class="max-w-full max-h-150 rounded shadow-lg"></video>
+                            @else
+                                <div class="text-center text-gray-400 p-12">
+                                    <span class="text-6xl block mb-4">📄</span>
+                                    <span class="text-lg">{{ __('No preview available for this file type.') }}</span>
+                                    @if ($url !== '')
+                                        <div class="mt-4">
+                                            <a href="{{ $url }}" target="_blank" class="text-[#077CB6] underline">{{ __('Download File') }}</a>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>
@@ -197,7 +369,7 @@
                     <dl class="space-y-3 text-sm">
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Type') }}</dt>
-                            <dd class="font-medium text-gray-900">{{ $content->type->name ?? 'Unknown' }}</dd>
+                            <dd class="font-medium text-gray-900">{{ $content->type?->name ?? __('Unknown') }}</dd>
                         </div>
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Priority') }}</dt>
@@ -217,7 +389,7 @@
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Expires') }}</dt>
                             <dd class="font-medium text-gray-900">
-                                {{ $content->expires_at ? $content->expires_at->format('d.m.Y H:i') : 'Never' }}
+                                {{ $content->expires_at ? $content->expires_at->format('d.m.Y H:i') : __('Never') }}
                             </dd>
                         </div>
                         @endif
@@ -233,10 +405,18 @@
                                 <dd class="font-medium text-red-600">{{ $content->deleted_at->format('d.m.Y H:i') }}</dd>
                             </div>
                         @endif
-                         <div class="flex justify-between">
-                            <dt class="text-gray-500">{{ __('File Size') }}</dt>
-                            <dd class="text-gray-900">{{ round(($meta['size'] ?? 0) / 1024 / 1024, 2) }} MB</dd>
-                        </div>
+                        @if ($content->type->is_file)
+                            @if ($content->type->multiple_file)
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-500">{{ __('Files') }}</dt>
+                                    <dd class="text-gray-900">{{ $fileItems->count() }}</dd>
+                                </div>
+                            @endif
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">{{ __('File Size') }}</dt>
+                                <dd class="text-gray-900">{{ round($totalFileSizeBytes / 1024 / 1024, 2) }} MB</dd>
+                            </div>
+                        @endif
                     </dl>
                 </div>
 
@@ -251,8 +431,57 @@
                                 #{{ $tag->name }}
                             </span>
                         @empty
-                            <p class="text-sm text-gray-400 italic">No tags assigned.</p>
+                            <p class="text-sm text-gray-400 italic">{{ __('No tags assigned.') }}</p>
                         @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            x-show="zoomOpen"
+            x-transition.opacity
+            style="display: none;"
+            class="fixed inset-0 z-90 bg-black/90"
+        >
+            <div class="absolute top-4 right-4 z-30 flex items-center gap-2">
+                <button type="button" class="rounded bg-white/90 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-white" @click.stop="zoomOut">
+                    -
+                </button>
+                <span class="rounded bg-white/90 px-3 py-2 text-xs font-semibold text-gray-700" x-text="Math.round(zoomScale * 100) + '%'"></span>
+                <button type="button" class="rounded bg-white/90 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-white" @click.stop="zoomIn">
+                    +
+                </button>
+                <button type="button" class="rounded bg-white/90 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-white" @click.stop="resetZoom">
+                    {{ __('Reset') }}
+                </button>
+                <button type="button" class="rounded bg-white/90 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-white" @click.stop="closeZoom">
+                    {{ __('Close') }}
+                </button>
+            </div>
+
+            <div class="absolute inset-0 z-10 pt-18 pb-4 px-4" @wheel="handleZoomWheel" @click="closeZoom">
+                <div
+                    class="h-full w-full flex items-center justify-center overflow-hidden select-none"
+                >
+                    <div
+                        class="max-h-[92vh] max-w-[96vw] flex items-center justify-center"
+                        :class="zoomScale > 1 ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'"
+                        @click.stop="handleZoomCanvasClick"
+                        @pointerdown.stop="startPan($event)"
+                        @pointermove.stop="continuePan($event)"
+                        @pointerup.stop="stopPan"
+                        @pointerleave.stop="stopPan"
+                        @pointercancel.stop="stopPan"
+                        @pointerup.window="stopPan"
+                    >
+                        <img
+                            :src="zoomImage"
+                            :alt="zoomTitle"
+                            class="max-h-[92vh] max-w-[96vw] object-contain transition-transform duration-75 pointer-events-none"
+                            :style="zoomTransformStyle()"
+                            @dragstart.prevent
+                        >
                     </div>
                 </div>
             </div>
