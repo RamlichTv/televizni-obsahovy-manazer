@@ -21,6 +21,7 @@ class ContentTypeController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:50', 'unique:content_types,name'],
             'is_file' => ['sometimes', 'boolean'],
+            'multiple_file' => ['sometimes', 'boolean'],
             'extensions' => ['nullable', 'string'],
             'max_size_mb' => ['nullable', 'numeric', 'min:1', 'max:1024'],
         ]);
@@ -34,6 +35,7 @@ class ContentTypeController extends Controller
                 'action' => 'content.types.store',
                 'type_id' => $type->id,
                 'is_file' => (bool) $type->is_file,
+                'multiple_file' => (bool) $type->multiple_file,
             ],
             userId: $request->user()?->id,
         );
@@ -53,6 +55,7 @@ class ContentTypeController extends Controller
         $before = [
             'name' => $type->name,
             'is_file' => (bool) $type->is_file,
+            'multiple_file' => (bool) $type->multiple_file,
             'extension_whitelist' => $type->extension_whitelist,
             'max_size' => $type->max_size,
         ];
@@ -60,6 +63,7 @@ class ContentTypeController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:50', Rule::unique('content_types')->ignore($type->id)],
             'is_file' => ['sometimes', 'boolean'],
+            'multiple_file' => ['sometimes', 'boolean'],
             'extensions' => ['nullable', 'string'],
             'max_size_mb' => ['nullable', 'numeric', 'min:1', 'max:1024'],
         ]);
@@ -73,10 +77,13 @@ class ContentTypeController extends Controller
                 'action' => 'content.types.update',
                 'type_id' => $type->id,
                 'is_file' => (bool) $type->is_file,
+                'multiple_file' => (bool) $type->multiple_file,
                 'old_name' => $before['name'],
                 'new_name' => $type->name,
                 'old_is_file' => $before['is_file'],
                 'new_is_file' => (bool) $type->is_file,
+                'old_multiple_file' => $before['multiple_file'],
+                'new_multiple_file' => (bool) $type->multiple_file,
                 'old_extension_whitelist' => $before['extension_whitelist'],
                 'new_extension_whitelist' => $type->extension_whitelist,
                 'old_max_size' => $before['max_size'],
@@ -136,9 +143,12 @@ class ContentTypeController extends Controller
      */
     private function prepareData(Request $request): array
     {
+        $isFile = $request->boolean('is_file');
+        $isMultipleFile = $isFile && $request->boolean('multiple_file');
+
         // 1. Process extensions (string "jpg, png" -> array ['jpg', 'png'])
         $extensions = null;
-        if ($request->filled('extensions')) {
+        if ($isFile && $request->filled('extensions')) {
             $rawExts = explode(',', $request->input('extensions'));
             $extensions = collect($rawExts)
                 ->map(fn($ext) => strtolower(trim($ext))) // Remove spaces and lowercase.
@@ -149,17 +159,17 @@ class ContentTypeController extends Controller
 
         // 2. Process size (MB -> bytes)
         $maxSize = null;
-        if ($request->filled('max_size_mb')) {
+        if ($isFile && $request->filled('max_size_mb')) {
             $maxSize = $request->input('max_size_mb') * 1024 * 1024;
         }
 
         return [
             'name' => $request->name,
-            'is_file' => $request->boolean('is_file'), // Safely converts checkbox input to bool.
+            'is_file' => $isFile, // Safely converts checkbox input to bool.
+            'multiple_file' => $isMultipleFile,
             'extension_whitelist' => $extensions,
             'max_size' => $maxSize,
         ];
     }
 }
-
 

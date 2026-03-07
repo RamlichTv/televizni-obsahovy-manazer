@@ -25,7 +25,9 @@ class ContentObjectRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $contentType = ContentType::find($this->input('type_id'));
+
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'type_id' => ['required', 'exists:content_types,id'],
             'description' => ['nullable', 'string'],
@@ -34,35 +36,53 @@ class ContentObjectRequest extends FormRequest
             'published_at' => ['nullable', 'date', 'after_or_equal:date'],
             'tags' => ['array'],
             'tags.*' => ['exists:tags,id'],
-            
-            'file_upload' => [
-                'nullable',
-                'file',
-                function ($attribute, $value, $fail) {
-                    $typeId = $this->input('type_id');
-                    $contentType = ContentType::find($typeId);
-
-                    if (!$contentType || !$contentType->is_file) {
-                        return;
-                    }
-
-                    $allowed = collect((array) ($contentType->extension_whitelist ?? []))
-                        ->map(fn($rule) => strtolower(trim((string) $rule)))
-                        ->filter()
-                        ->values()
-                        ->all();
-
-                    if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
-                        $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
-                    }
-
-                    $maxSizeBytes = (int) ($contentType->max_size ?? 0);
-                    if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $this->user()->cannot('bypass_max_size')) {
-                        $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
-                    }
-                },
-            ],
         ];
+
+        if (!$contentType?->is_file) {
+            $rules['file_upload'] = ['nullable'];
+            return $rules;
+        }
+
+        if ($contentType->multiple_file) {
+            $rules['file_upload'] = ['nullable', 'array'];
+            $rules['file_upload.*'] = ['file', $this->buildFileValidationRule($contentType)];
+            return $rules;
+        }
+
+        $rules['file_upload'] = ['nullable', 'file', $this->buildFileValidationRule($contentType)];
+
+        return $rules;
+    }
+
+    /**
+     * Build one reusable validator for a single uploaded file.
+     *
+     * @param ContentType $contentType
+     * @return \Closure
+     */
+    private function buildFileValidationRule(ContentType $contentType): \Closure
+    {
+        return function ($attribute, $value, $fail) use ($contentType): void {
+            if (!$value instanceof UploadedFile) {
+                $fail("The {$attribute} must be a valid uploaded file.");
+                return;
+            }
+
+            $allowed = collect((array) ($contentType->extension_whitelist ?? []))
+                ->map(fn ($rule) => strtolower(trim((string) $rule)))
+                ->filter()
+                ->values()
+                ->all();
+
+            if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
+                $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
+            }
+
+            $maxSizeBytes = (int) ($contentType->max_size ?? 0);
+            if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $this->user()->cannot('bypass_max_size')) {
+                $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
+            }
+        };
     }
 
     /**

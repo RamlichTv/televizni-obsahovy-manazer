@@ -28,4 +28,20 @@ class ContentObjectFileUrlTest extends TestCase
         $this->assertNotNull($content->fileUrl());
         $this->assertStringEndsWith('/storage/users/test/content/video.mp4', (string) $content->fileUrl());
     }
+
+    public function test_it_keeps_absolute_meta_path_urls_unchanged(): void
+    {
+        $absolutePath = 'https://example.test/storage/users/test/content/video.mp4';
+
+        $content = ContentObject::create([
+            'name' => 'Video URL',
+            'meta' => [
+                'path' => $absolutePath,
+                'mime_type' => 'video/mp4',
+            ],
+        ]);
+
+        $this->assertSame($absolutePath, $content->filePath());
+        $this->assertSame($absolutePath, $content->fileUrl());
+    }
 }

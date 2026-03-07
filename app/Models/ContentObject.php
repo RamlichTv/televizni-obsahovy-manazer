@@ -103,7 +103,109 @@ class ContentObject extends Model
     public function filePath() : ?string
     {
         $meta = is_array($this->meta) ? $this->meta : [];
-        $rawPath = trim((string) ($meta['path'] ?? ''));
+        return $this->normalizeMetaPath($meta['path'] ?? null);
+    }
+
+    /**
+     * Public URL for the stored file.
+     *
+     * @return string|null
+     */
+    public function fileUrl() : ?string
+    {
+        $path = $this->normalizeMetaPath(data_get($this->meta, 'path'));
+        if ($path === null) {
+            return null;
+        }
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        return Storage::disk('public')->exists($path)
+            ? asset('storage/' . $path)
+            : null;
+    }
+
+    /**
+     * Normalize all file entries from content meta.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function fileItems() : array
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        $rawItems = $meta['files'] ?? [];
+        $items = [];
+
+        if (is_array($rawItems)) {
+            foreach ($rawItems as $rawItem) {
+                if (!is_array($rawItem)) {
+                    continue;
+                }
+
+                $url = $this->resolveMetaPathToUrl($rawItem['path'] ?? null);
+                if ($url === null) {
+                    continue;
+                }
+
+                $items[] = [
+                    'path' => $rawItem['path'] ?? null,
+                    'url' => $url,
+                    'original_filename' => $rawItem['original_filename'] ?? null,
+                    'mime_type' => $rawItem['mime_type'] ?? null,
+                    'size' => isset($rawItem['size']) ? (int) $rawItem['size'] : null,
+                ];
+            }
+        }
+
+        if ($items === []) {
+            $singleUrl = $this->fileUrl();
+            if ($singleUrl !== null) {
+                $items[] = [
+                    'path' => $meta['path'] ?? null,
+                    'url' => $singleUrl,
+                    'original_filename' => $meta['original_filename'] ?? null,
+                    'mime_type' => $meta['mime_type'] ?? null,
+                    'size' => isset($meta['size']) ? (int) $meta['size'] : null,
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Resolve one meta path to a public URL.
+     *
+     * @param string|null $rawPath
+     * @return string|null
+     */
+    private function resolveMetaPathToUrl(?string $rawPath) : ?string
+    {
+        $normalizedPath = $this->normalizeMetaPath($rawPath);
+        if ($normalizedPath === null) {
+            return null;
+        }
+
+        if (filter_var($normalizedPath, FILTER_VALIDATE_URL)) {
+            return $normalizedPath;
+        }
+
+        return Storage::disk('public')->exists($normalizedPath)
+            ? asset('storage/' . $normalizedPath)
+            : null;
+    }
+
+    /**
+     * Normalize one raw meta path value.
+     *
+     * @param string|null $rawPath
+     * @return string|null
+     */
+    private function normalizeMetaPath(?string $rawPath) : ?string
+    {
+        $rawPath = trim((string) $rawPath);
         if ($rawPath === '') {
             return null;
         }
@@ -118,26 +220,5 @@ class ContentObject extends Model
         }
 
         return $path !== '' ? $path : null;
-    }
-
-    /**
-     * Public URL for the stored file.
-     *
-     * @return string|null
-     */
-    public function fileUrl() : ?string
-    {
-        $path = $this->filePath();
-        if ($path === null) {
-            return null;
-        }
-
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            return $path;
-        }
-
-        return Storage::disk('public')->exists($path)
-            ? asset('storage/' . $path)
-            : null;
     }
 }

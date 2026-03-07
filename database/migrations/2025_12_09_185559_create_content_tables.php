@@ -22,6 +22,7 @@ class CreateContentTables extends Migration
             $table->bigIncrements('id');
             $table->string('name')->unique();
             $table->boolean('is_file')->default(false);
+            $table->boolean('multiple_file')->default(false);
             $table->json('extension_whitelist')->nullable();
             $table->bigInteger('max_size')->nullable(); // MB
             $table->timestamps();

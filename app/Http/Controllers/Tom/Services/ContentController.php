@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tom\Services;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tom\Services\ContentObjectRequest;
 use App\Models\ContentObject;
+use App\Models\ContentType;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\View\View;
@@ -128,6 +129,7 @@ class ContentController extends Controller
     function store(ContentObjectRequest $request) {
         $data = $request->safe()->except(['file_upload', 'tags']);
         $user = $request->user();
+        $uploadedFilesCount = 0;
 
         do {
             $data['id'] = (string) \Illuminate\Support\Str::uuid();
@@ -136,7 +138,7 @@ class ContentController extends Controller
         $data['author_id'] = $user->id;
         $data['status_id'] = 1; 
 
-        $contentType = \App\Models\ContentType::find($data['type_id']);
+        $contentType = ContentType::find($data['type_id']);
 
         if ($contentType?->is_file && !$request->hasFile('file_upload')) {
             $this->logFailure(
@@ -156,24 +158,34 @@ class ContentController extends Controller
         $content = ContentObject::create($data);
 
         if ($request->hasFile('file_upload')) {
-            $file = $request->file('file_upload');
-            
-            // public/storage/content/{uuid}.ext
-            $path = $file->storeAs(
-                'users/' . $user->username . '/content', 
-                $content->id . '.' . $file->getClientOriginalExtension(), 
-                'public'
-            );
+            $files = $this->normalizeUploadedFiles($request->file('file_upload'));
+            $uploadedFilesCount = count($files);
 
-            $meta = [
-                'original_filename' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
-                // Store a disk-relative path (public disk root), never a full URL.
-                'path' => $path
-            ];
-            
-            $content->update(['meta' => $meta]);
+            $storedFiles = [];
+            foreach ($files as $index => $file) {
+                $path = $contentType?->multiple_file
+                    ? $file->storeAs(
+                        'users/' . $user->username . '/content/' . $content->id,
+                        ($index + 1) . '_' . uniqid('file_', true) . '.' . $file->getClientOriginalExtension(),
+                        'public'
+                    )
+                    : $file->storeAs(
+                        'users/' . $user->username . '/content',
+                        $content->id . '.' . $file->getClientOriginalExtension(),
+                        'public'
+                    );
+
+                $storedFiles[] = [
+                    'original_filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'path' => $this->buildStoragePublicUrl($path),
+                ];
+            }
+
+            if ($storedFiles !== []) {
+                $content->update(['meta' => $this->buildContentMetaFromFiles($storedFiles)]);
+            }
         }
 
         if ($request->has('tags')) {
@@ -217,6 +229,7 @@ class ContentController extends Controller
                 'type_id' => $content->type_id,
                 'type_name' => $contentType?->name,
                 'has_file' => $request->hasFile('file_upload'),
+                'uploaded_file_count' => $uploadedFilesCount,
             ],
             userId: $user->id,
             relatedContentId: $content->id,
@@ -263,7 +276,7 @@ class ContentController extends Controller
         ];
 
         // Validation (similar to create, but file is nullable)
-        $request->validate([
+        $validationRules = [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|integer|min:0|max:20',
@@ -271,31 +284,67 @@ class ContentController extends Controller
             'published_at' => ['nullable', 'date', 'after_or_equal:date'],
             'tags' => 'array',
             'tags.*' => 'exists:tags,id',
-            'file_upload' => [
-                'nullable',
-                'file',
-                function ($attribute, $value, $fail) use ($request, $contentType) {
-                    if (!$contentType || !$contentType->is_file) {
-                        return;
-                    }
+        ];
 
-                    $allowed = collect((array) ($contentType->extension_whitelist ?? []))
-                        ->map(fn($rule) => strtolower(trim((string) $rule)))
-                        ->filter()
-                        ->values()
-                        ->all();
+        if ($contentType?->is_file) {
+            if ($contentType->multiple_file) {
+                $validationRules['file_upload'] = ['nullable', 'array'];
+                $validationRules['file_upload.*'] = [
+                    'file',
+                    function ($attribute, $value, $fail) use ($request, $contentType): void {
+                        if (!$value instanceof UploadedFile) {
+                            $fail("The {$attribute} must be a valid uploaded file.");
+                            return;
+                        }
 
-                    if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
-                        $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
-                    }
+                        $allowed = collect((array) ($contentType->extension_whitelist ?? []))
+                            ->map(fn ($rule) => strtolower(trim((string) $rule)))
+                            ->filter()
+                            ->values()
+                            ->all();
 
-                    $maxSizeBytes = (int) ($contentType->max_size ?? 0);
-                    if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $request->user()->cannot('bypass_max_size')) {
-                        $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
-                    }
-                },
-            ],
-        ]);
+                        if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
+                            $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
+                        }
+
+                        $maxSizeBytes = (int) ($contentType->max_size ?? 0);
+                        if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $request->user()->cannot('bypass_max_size')) {
+                            $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
+                        }
+                    },
+                ];
+            } else {
+                $validationRules['file_upload'] = [
+                    'nullable',
+                    'file',
+                    function ($attribute, $value, $fail) use ($request, $contentType): void {
+                        if (!$value instanceof UploadedFile) {
+                            $fail("The {$attribute} must be a valid uploaded file.");
+                            return;
+                        }
+
+                        $allowed = collect((array) ($contentType->extension_whitelist ?? []))
+                            ->map(fn ($rule) => strtolower(trim((string) $rule)))
+                            ->filter()
+                            ->values()
+                            ->all();
+
+                        if (!empty($allowed) && !$this->fileMatchesAnyRule($value, $allowed)) {
+                            $fail("The {$attribute} must match one of: " . implode(', ', $allowed));
+                        }
+
+                        $maxSizeBytes = (int) ($contentType->max_size ?? 0);
+                        if ($maxSizeBytes > 0 && $value->getSize() > $maxSizeBytes && $request->user()->cannot('bypass_max_size')) {
+                            $fail("The file is too large. Max size allowed is " . round($maxSizeBytes / 1024 / 1024, 2) . " MB.");
+                        }
+                    },
+                ];
+            }
+        } else {
+            $validationRules['file_upload'] = ['nullable'];
+        }
+
+        $request->validate($validationRules);
 
         // Update base data
         $content_object->update($request->except(['tags', 'file_upload']));
@@ -309,21 +358,42 @@ class ContentController extends Controller
         }
 
         // Update file (if a new one was uploaded)
+        $uploadedNewFilesCount = 0;
         if ($request->hasFile('file_upload')) {
-            $file = $request->file('file_upload');
-            $path = $file->storeAs(
-                'content', 
-                $content_object->id . '.' . $file->getClientOriginalExtension(), 
-                'public'
-            );
-            
-            $meta = is_array($content_object->meta) ? $content_object->meta : json_decode($content_object->meta, true) ?? [];
-            $meta['original_filename'] = $file->getClientOriginalName();
-            $meta['mime_type'] = $file->getMimeType();
-            $meta['size'] = $file->getSize();
-            $meta['path'] = $path;
+            $files = $this->normalizeUploadedFiles($request->file('file_upload'));
+            $uploadedNewFilesCount = count($files);
 
-            $content_object->update(['meta' => $meta]);
+            $storedFiles = [];
+            foreach ($files as $index => $file) {
+                $path = $contentType?->multiple_file
+                    ? $file->storeAs(
+                        'content/' . $content_object->id,
+                        ($index + 1) . '_' . uniqid('file_', true) . '.' . $file->getClientOriginalExtension(),
+                        'public'
+                    )
+                    : $file->storeAs(
+                        'content',
+                        $content_object->id . '.' . $file->getClientOriginalExtension(),
+                        'public'
+                    );
+
+                $storedFiles[] = [
+                    'original_filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'path' => $this->buildStoragePublicUrl($path),
+                ];
+            }
+
+            if ($storedFiles !== []) {
+                $meta = is_array($content_object->meta) ? $content_object->meta : json_decode($content_object->meta, true) ?? [];
+                $contentMeta = $this->buildContentMetaFromFiles($storedFiles);
+                if (!($contentType?->multiple_file)) {
+                    unset($meta['files']);
+                }
+
+                $content_object->update(['meta' => array_merge($meta, $contentMeta)]);
+            }
         }
 
         // Sync tags
@@ -374,6 +444,7 @@ class ContentController extends Controller
                 'type_id' => $content_object->type_id,
                 'type_name' => $contentType?->name,
                 'uploaded_new_file' => $request->hasFile('file_upload'),
+                'uploaded_new_file_count' => $uploadedNewFilesCount,
                 'added_tag_ids' => $addedTagIds,
                 'removed_tag_ids' => $removedTagIds,
             ], $changeContext),
@@ -555,6 +626,65 @@ class ContentController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * Normalize uploaded files into a flat list of UploadedFile instances.
+     *
+     * @param mixed $files
+     * @return array<int, UploadedFile>
+     */
+    private function normalizeUploadedFiles(mixed $files): array
+    {
+        if ($files instanceof UploadedFile) {
+            return [$files];
+        }
+
+        if (!is_array($files)) {
+            return [];
+        }
+
+        return collect($files)
+            ->filter(fn ($file) => $file instanceof UploadedFile)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Build a canonical content meta payload from stored files.
+     *
+     * Keeps backward compatibility by mirroring the first file to
+     * original_filename/mime_type/size/path.
+     *
+     * @param array<int, array<string, mixed>> $storedFiles
+     * @return array<string, mixed>
+     */
+    private function buildContentMetaFromFiles(array $storedFiles): array
+    {
+        if ($storedFiles === []) {
+            return [];
+        }
+
+        $primary = $storedFiles[0];
+
+        return [
+            'original_filename' => $primary['original_filename'] ?? null,
+            'mime_type' => $primary['mime_type'] ?? null,
+            'size' => $primary['size'] ?? null,
+            'path' => $primary['path'] ?? null,
+            'files' => $storedFiles,
+        ];
+    }
+
+    /**
+     * Build absolute public URL in /storage for persisted file metadata.
+     *
+     * @param string $relativePath
+     * @return string
+     */
+    private function buildStoragePublicUrl(string $relativePath): string
+    {
+        return rtrim(url('/'), '/') . '/storage/' . ltrim($relativePath, '/');
     }
 
     /**
