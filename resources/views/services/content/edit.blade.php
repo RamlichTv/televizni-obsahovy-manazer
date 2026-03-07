@@ -30,6 +30,9 @@
         $selectedTagIds = collect((array) old('tags', $content->tags->pluck('id')->all()))
             ->map(fn ($id) => (string) $id)
             ->values();
+        $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
+        $fileItems = collect($content->fileItems());
+        $totalFileSizeBytes = (int) $fileItems->sum(fn ($file) => (int) ($file['size'] ?? 0));
     @endphp
 
     {{-- Wrap the whole page in a form so sidebar controls can submit the same payload. --}}
@@ -61,74 +64,109 @@
 
                 {{-- 2. Preview & upload --}}
                 @if ($content->type->is_file)
-                @php
-                    $meta = is_array($content->meta) ? $content->meta : json_decode($content->meta, true);
-                    $url = $content->fileUrl();
-                    $mime = $meta['mime_type'] ?? '';
-                @endphp
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
                      x-data="{
                         hasNewFile: false,
-                        newPreviewType: null,
-                        newPreviewUrl: null,
-                        newFileName: '',
+                        newFileLabel: '',
+                        newImagePreviews: [],
+                        selectedNonImageCount: 0,
+                        clearPreviews() {
+                            this.newImagePreviews.forEach(preview => URL.revokeObjectURL(preview.url));
+                            this.newImagePreviews = [];
+                        },
+                        applySelectedFiles(files) {
+                            this.clearPreviews();
+                            this.hasNewFile = files.length > 0;
+                            this.newFileLabel = files.length > 1 ? `${files.length} files selected` : (files[0]?.name || '');
+                            this.selectedNonImageCount = 0;
+
+                            files.forEach(file => {
+                                if (file.type.startsWith('image/')) {
+                                    this.newImagePreviews.push({
+                                        name: file.name,
+                                        url: URL.createObjectURL(file),
+                                    });
+                                    return;
+                                }
+
+                                this.selectedNonImageCount += 1;
+                            });
+                        },
                         setPreview(event) {
-                            const file = event.target.files[0];
-                            this.hasNewFile = !!file;
-
-                            if (this.newPreviewUrl) {
-                                URL.revokeObjectURL(this.newPreviewUrl);
-                                this.newPreviewUrl = null;
-                            }
-
-                            if (!file) {
-                                this.newPreviewType = null;
-                                this.newFileName = '';
-                                return;
-                            }
-
-                            this.newFileName = file.name;
-
-                            if (file.type.startsWith('image/')) {
-                                this.newPreviewType = 'image';
-                                this.newPreviewUrl = URL.createObjectURL(file);
-                                return;
-                            }
-
-                            if (file.type.startsWith('video/')) {
-                                this.newPreviewType = 'video';
-                                this.newPreviewUrl = URL.createObjectURL(file);
-                                return;
-                            }
-
-                            this.newPreviewType = 'other';
+                            const files = Array.from(event.target.files || []);
+                            this.applySelectedFiles(files);
                         }
                      }">
                     <label class="block text-sm font-medium text-gray-700 mb-4">{{ __('File Content') }}</label>
                     
                     {{-- Current file --}}
-                    <div class="mb-6 flex justify-center bg-gray-100 rounded-lg p-4 border border-dashed border-gray-300">
+                    <div class="mb-6 bg-gray-100 rounded-lg p-4 border border-dashed border-gray-300">
                         <div x-show="!hasNewFile">
-                            @if($url && str_contains($mime, 'image'))
-                                <img src="{{ $url }}" class="max-h-64 rounded shadow-sm">
-                            @elseif($url && str_contains($mime, 'video'))
-                                <video src="{{ $url }}" controls class="max-h-64 rounded shadow-sm"></video>
+                            @if ($content->type->multiple_file)
+                                @if ($fileItems->isEmpty())
+                                    <div class="flex min-h-32 items-center justify-center text-sm text-gray-500">
+                                        {{ __('No files are available for this content.') }}
+                                    </div>
+                                @else
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        @foreach ($fileItems as $file)
+                                            @php
+                                                $itemUrl = (string) ($file['url'] ?? '');
+                                                $itemMime = strtolower((string) ($file['mime_type'] ?? ''));
+                                                $itemName = (string) ($file['original_filename'] ?? '');
+                                            @endphp
+                                            <article class="rounded-lg border border-gray-200 bg-white p-2">
+                                                @if ($itemUrl !== '' && str_starts_with($itemMime, 'image/'))
+                                                    <img src="{{ $itemUrl }}" alt="{{ $itemName }}" class="h-32 w-full rounded object-cover">
+                                                @elseif ($itemUrl !== '' && str_starts_with($itemMime, 'video/'))
+                                                    <video src="{{ $itemUrl }}" controls class="h-32 w-full rounded object-cover"></video>
+                                                @else
+                                                    <div class="flex h-32 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-500">
+                                                        <a href="{{ $itemUrl }}" target="_blank" class="text-[#077CB6] underline">{{ __('Download file') }}</a>
+                                                    </div>
+                                                @endif
+                                                <p class="mt-2 truncate text-xs text-gray-600" title="{{ $itemName }}">
+                                                    {{ $itemName !== '' ? $itemName : __('Unnamed file') }}
+                                                </p>
+                                            </article>
+                                        @endforeach
+                                    </div>
+                                @endif
                             @else
-                                <span class="text-gray-500">{{ __('Current file:') }} {{ $meta['original_filename'] ?? 'Unknown' }}</span>
+                                @php
+                                    $primaryFile = $fileItems->first();
+                                    $url = (string) ($primaryFile['url'] ?? '');
+                                    $mime = strtolower((string) ($primaryFile['mime_type'] ?? ''));
+                                    $name = (string) ($primaryFile['original_filename'] ?? 'Unknown');
+                                @endphp
+                                <div class="flex justify-center">
+                                    @if($url !== '' && str_starts_with($mime, 'image/'))
+                                        <img src="{{ $url }}" class="max-h-64 rounded shadow-sm">
+                                    @elseif($url !== '' && str_starts_with($mime, 'video/'))
+                                        <video src="{{ $url }}" controls class="max-h-64 rounded shadow-sm"></video>
+                                    @else
+                                        <span class="text-gray-500">{{ __('Current file:') }} {{ $name }}</span>
+                                    @endif
+                                </div>
                             @endif
                         </div>
                         <div x-show="hasNewFile" class="text-center">
-                            <template x-if="newPreviewType === 'image'">
-                                <img :src="newPreviewUrl" class="max-h-64 rounded shadow-sm">
+                            <template x-if="newImagePreviews.length > 0">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <template x-for="preview in newImagePreviews" :key="preview.url">
+                                        <img :src="preview.url" :alt="preview.name" class="h-32 w-full rounded object-cover shadow-sm">
+                                    </template>
+                                </div>
                             </template>
-                            <template x-if="newPreviewType === 'video'">
-                                <video :src="newPreviewUrl" controls class="max-h-64 rounded shadow-sm"></video>
-                            </template>
-                            <template x-if="newPreviewType === 'other'">
-                                <span class="text-gray-500">{{ __('Selected file:') }} <span x-text="newFileName"></span></span>
+                            <template x-if="newImagePreviews.length === 0">
+                                <span class="text-gray-500" x-text="newFileLabel || '{{ __('Selected files') }}'"></span>
                             </template>
                         </div>
                     </div>
+                    <p x-show="hasNewFile && newFileLabel" class="mb-2 text-xs text-gray-500" x-text="newFileLabel"></p>
+                    <template x-if="hasNewFile && selectedNonImageCount > 0">
+                        <p class="mb-3 text-xs text-gray-500" x-text="`${selectedNonImageCount} non-image file(s) selected`"></p>
+                    </template>
 
                     {{-- Upload new file --}}
                     <label class="block">
@@ -145,8 +183,8 @@
                                 })
                                 ->implode(',');
                         @endphp
-                        <span class="sr-only">{{ __('Choose new file') }}</span>
-                        <input type="file" name="file_upload" accept="{{ $accept }}" class="block w-full text-sm text-gray-500
+                        <span class="sr-only">{{ $content->type->multiple_file ? __('Choose new files') : __('Choose new file') }}</span>
+                        <input type="file" name="{{ $content->type->multiple_file ? 'file_upload[]' : 'file_upload' }}" accept="{{ $accept }}" @if ($content->type->multiple_file) multiple @endif class="block w-full text-sm text-gray-500
                             file:mr-4 file:py-2 file:px-4
                             file:rounded-full file:border-0
                             file:text-sm file:font-semibold
@@ -155,8 +193,15 @@
                         "
                         @change="setPreview($event)"/>
                     </label>
-                    <p class="mt-2 text-xs text-gray-500">{{ __('Upload new file to replace the current one. Leave empty to keep current.') }}</p>
+                    <p class="mt-2 text-xs text-gray-500">
+                        @if ($content->type->multiple_file)
+                            {{ __('Upload new files to replace the current set. Leave empty to keep current files.') }}
+                        @else
+                            {{ __('Upload new file to replace the current one. Leave empty to keep current.') }}
+                        @endif
+                    </p>
                     @error('file_upload') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                    @error('file_upload.*') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
                 @endif
 
@@ -223,13 +268,19 @@
                     <dl class="space-y-3 text-sm">
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Type') }}</dt>
-                            <dd class="font-medium text-gray-900">{{ $content->type->name ?? 'Unknown' }}</dd>
+                            <dd class="font-medium text-gray-900">{{ $content->type?->name ?? __('Unknown') }}</dd>
                         </div>
                         @if ($content->type->is_file)
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Allowed extensions') }}</dt>
                             <dd class="max-w-32 truncate font-medium text-gray-900">{{ implode(', ', $content->type->extension_whitelist ?? []) }}</dd>
                         </div>
+                        @if ($content->type->multiple_file)
+                        <div class="flex justify-between">
+                            <dt class="text-gray-500">{{ __('Files') }}</dt>
+                            <dd class="font-medium text-gray-900">{{ $fileItems->count() }}</dd>
+                        </div>
+                        @endif
                         @endif
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Created') }}</dt>
@@ -241,10 +292,12 @@
                                 <dd class="font-medium text-red-600">{{ $content->deleted_at->format('d.m.Y H:i') }}</dd>
                             </div>
                         @endif
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">{{ __('File Size') }}</dt>
-                            <dd class="text-gray-900">{{ round(($meta['size'] ?? 0) / 1024 / 1024, 2) }} MB</dd>
-                        </div>
+                        @if ($content->type->is_file)
+                            <div class="flex justify-between">
+                                <dt class="text-gray-500">{{ __('File Size') }}</dt>
+                                <dd class="text-gray-900">{{ round($totalFileSizeBytes / 1024 / 1024, 2) }} MB</dd>
+                            </div>
+                        @endif
                     </dl>
                 </div>
 

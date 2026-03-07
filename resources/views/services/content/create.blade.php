@@ -23,24 +23,107 @@
 
     {{-- Alpine state handles content type selection, upload restrictions, and client-side preview. --}}
     <div class="py-12" x-data="{ 
-        selectedType: '',
-        isFile: false,
+        selectedType: '{{ old('type_id', '') }}',
         types: {{ $contentTypes->mapWithKeys(fn($i) => [$i->id => $i])->toJson() }},
-        fileName: null,
-        filePreview: null,
-        
+        fileNames: [],
+        fileImagePreviews: [],
+        selectedNonImageCount: 0,
+        dragActive: false,
+        dragDepth: 0,
+
+        clearImagePreviews() {
+            this.fileImagePreviews.forEach(preview => URL.revokeObjectURL(preview.url));
+            this.fileImagePreviews = [];
+        },
+
+        applyFiles(files) {
+            this.clearImagePreviews();
+            this.fileNames = files.map(file => file.name);
+            this.selectedNonImageCount = 0;
+
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    this.fileImagePreviews.push({
+                        name: file.name,
+                        url: URL.createObjectURL(file),
+                    });
+                    return;
+                }
+
+                this.selectedNonImageCount += 1;
+            });
+        },
+
         updateFileInput(event) {
-            const file = event.target.files[0];
-            this.fileName = file ? file.name : null;
-            
-            // If it is an image, show a preview.
-            if (file && (file.type.includes('image'))) {
-                const reader = new FileReader();
-                reader.onload = (e) => this.filePreview = e.target.result;
-                reader.readAsDataURL(file);
-            } else {
-                this.filePreview = null;
+            const files = Array.from(event.target.files || []);
+            this.applyFiles(files);
+        },
+
+        handleTypeChange() {
+            this.dragActive = false;
+            this.dragDepth = 0;
+            this.fileNames = [];
+            this.selectedNonImageCount = 0;
+            this.clearImagePreviews();
+
+            const fileInput = this.$refs.fileUploadInput;
+            if (fileInput) {
+                fileInput.value = '';
             }
+        },
+
+        handleDragEnter() {
+            if (!this.currentType.is_file) {
+                return;
+            }
+
+            this.dragDepth += 1;
+            this.dragActive = true;
+        },
+
+        handleDragOver(event) {
+            if (!this.currentType.is_file) {
+                return;
+            }
+
+            event.dataTransfer.dropEffect = 'copy';
+            this.dragActive = true;
+        },
+
+        handleDragLeave() {
+            if (!this.currentType.is_file) {
+                return;
+            }
+
+            this.dragDepth = Math.max(0, this.dragDepth - 1);
+            if (this.dragDepth === 0) {
+                this.dragActive = false;
+            }
+        },
+
+        handleDrop(event) {
+            if (!this.currentType.is_file) {
+                return;
+            }
+
+            const files = Array.from(event.dataTransfer?.files || []);
+            this.dragDepth = 0;
+            this.dragActive = false;
+
+            if (files.length === 0) {
+                return;
+            }
+
+            const fileInput = this.$refs.fileUploadInput;
+            if (!fileInput || typeof DataTransfer === 'undefined') {
+                return;
+            }
+
+            const dataTransfer = new DataTransfer();
+            files.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+
+            this.applyFiles(files);
         },
         
         get currentType() {
@@ -52,7 +135,7 @@
 
             if (!rules) return '';
 
-            // If coming as JSON string, parse it
+            // If coming as JSON string, parse it.
             if (typeof rules === 'string') {
                 try {
                     rules = JSON.parse(rules);
@@ -64,15 +147,27 @@
             if (!Array.isArray(rules)) return '';
 
             return rules.map(value => {
-                // If it looks like a MIME type (contains slash), return as-is
+                // If it looks like a MIME type (contains slash), return as-is.
                 if (value.includes('/')) {
                     return value;
                 }
 
-                // Otherwise treat it as extension
-                return '.' + value.replace(/^\./, '');})
-                .join(',');
+                // Otherwise treat it as extension.
+                return '.' + value.replace(/^\./, '');
+            }).join(',');
+        },
+
+        get selectedFileLabel() {
+            if (this.fileNames.length === 0) {
+                return '';
             }
+
+            if (this.fileNames.length === 1) {
+                return this.fileNames[0];
+            }
+
+            return `${this.fileNames.length} files selected`;
+        }
     }">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">

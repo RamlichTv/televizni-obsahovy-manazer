@@ -8,6 +8,7 @@
                     <th class="px-4 py-2">Name</th>
                     <th class="px-4 py-2">Allowed filetypes</th>
                     <th class="px-4 py-2">Max Size</th>
+                    <th class="px-4 py-2">Multiple Files</th>
                     <th class="px-4 py-2">Action</th>
                 </tr>
             </thead>
@@ -22,6 +23,13 @@
                         </td>
                         <td class="px-4 py-2">
                             {{ round($type->max_size / 1024 / 1024) }} MB
+                        </td>
+                        <td class="px-4 py-2">
+                            @if($type->is_file)
+                                {{ $type->multiple_file ? __('Yes') : __('No') }}
+                            @else
+                                -
+                            @endif
                         </td>
                         <td class="px-4 py-2">
                             <div class="flex items-center gap-3">
@@ -44,11 +52,14 @@
 
                     {{-- Expanded inline editor for the selected type row. --}}
                     <tr x-show="editingTypeId === {{ $type->id }}" x-cloak class="bg-gray-50 border-b">
-                        <td colspan="4" class="px-4 py-4">
+                        <td colspan="5" class="px-4 py-4">
                             <form action="{{ route('content.types.update', $type) }}"
                                   method="POST"
                                   class="space-y-3"
-                                  x-data="{ isFile: {{ $type->is_file ? 'true' : 'false' }} }">
+                                  x-data="{
+                                      isFile: {{ $type->is_file ? 'true' : 'false' }},
+                                      isMultipleFile: {{ $type->multiple_file ? 'true' : 'false' }},
+                                  }">
                                 @csrf
                                 @method('PATCH')
 
@@ -69,11 +80,25 @@
                                                name="is_file"
                                                value="1"
                                                x-model="isFile"
+                                               @change="if (!isFile) { isMultipleFile = false; }"
                                                class="rounded border-gray-300 text-[#077CB6] shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]">
                                         <label for="is_file_{{ $type->id }}" class="text-sm font-medium text-gray-700 cursor-pointer select-none">
                                             {{ __('Is this a file?') }}
                                         </label>
                                     </div>
+                                </div>
+
+                                <div x-show="isFile" class="flex items-center gap-2">
+                                    <input type="hidden" name="multiple_file" value="0">
+                                    <input type="checkbox"
+                                           id="multiple_file_{{ $type->id }}"
+                                           name="multiple_file"
+                                           value="1"
+                                           x-model="isMultipleFile"
+                                           class="rounded border-gray-300 text-[#077CB6] shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]">
+                                    <label for="multiple_file_{{ $type->id }}" class="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                                        {{ __('Allow multiple files') }}
+                                    </label>
                                 </div>
 
                                 <div x-show="isFile" x-transition class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -106,7 +131,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-2 text-center">No types defined.</td></tr>
+                    <tr><td colspan="5" class="px-4 py-2 text-center">No types defined.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -117,7 +142,7 @@
         <h3 class="text-lg font-bold text-gray-700 mb-3">{{ __('Add Content Type') }}</h3>
         
         {{-- Alpine.js state: isFile --}}
-        <form action="{{ route('content.types.store') }}" method="POST" class="space-y-3" x-data="{ isFile: false }">
+        <form action="{{ route('content.types.store') }}" method="POST" class="space-y-3" x-data="{ isFile: false, isMultipleFile: false }">
             @csrf
             
             {{-- Name (always visible) --}}
@@ -130,9 +155,19 @@
             {{-- Is file checkbox --}}
             <div class="flex items-center gap-2 py-2">
                 <input type="checkbox" id="is_file" name="is_file" value="1" x-model="isFile"
+                       @change="if (!isFile) { isMultipleFile = false; }"
                        class="rounded border-gray-300 text-[#077CB6] shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]">
                 <label for="is_file" class="text-sm font-medium text-gray-700 cursor-pointer select-none">
                     {{ __('Is this a file?') }}
+                </label>
+            </div>
+
+            <div x-show="isFile" class="flex items-center gap-2">
+                <input type="hidden" name="multiple_file" value="0">
+                <input type="checkbox" id="multiple_file" name="multiple_file" value="1" x-model="isMultipleFile"
+                       class="rounded border-gray-300 text-[#077CB6] shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]">
+                <label for="multiple_file" class="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                    {{ __('Allow multiple files') }}
                 </label>
             </div>
 

@@ -17,6 +17,7 @@
                 name="type_id"
                 id="type_id"
                 x-model="selectedType"
+                @change="handleTypeChange"
                 :required="true"
             >
                 <option value="" disabled>{{ __('Select type...') }}</option>
@@ -30,25 +31,38 @@
         <div x-show="selectedType && currentType.is_file" class="flex-1" x-transition.opacity>
             <x-input-label for="file_upload" x-text="'Upload ' + (currentType.name || 'File')" :required="true"/>
 
-            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md relative hover:bg-gray-50 transition">
+            <div
+                class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md relative transition"
+                :class="dragActive ? 'border-[#077CB6] bg-[#e7f4fb]' : 'border-gray-300 hover:bg-gray-50'"
+                @dragenter.prevent="handleDragEnter"
+                @dragover.prevent="handleDragOver"
+                @dragleave.prevent="handleDragLeave"
+                @drop.prevent="handleDrop"
+            >
                 <div class="space-y-1 text-center">
                     {{-- Preview selected image files before submit. --}}
-                    <template x-if="filePreview">
-                        <img :src="filePreview" class="mx-auto h-32 object-contain mb-2 rounded">
+                    <template x-if="fileImagePreviews.length > 0">
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <template x-for="preview in fileImagePreviews" :key="preview.url">
+                                <img :src="preview.url" :alt="preview.name" class="mx-auto h-24 w-full object-cover rounded">
+                            </template>
+                        </div>
                     </template>
 
                     {{-- Generic icon for non-image files or no selection. --}}
-                    <template x-if="!filePreview">
+                    <template x-if="fileImagePreviews.length === 0">
                         <x-icon name="upload-picture" class="mx-auto h-12 w-12 text-gray-400" />
                     </template>
 
                     <div class="flex text-sm text-gray-600 justify-center">
                         <label for="file_upload" class="relative cursor-pointer bg-white rounded-md font-medium text-[#077CB6] hover:text-[#E69C24] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-[#E69C24]">
-                            <span>{{ __('Upload a file') }}</span>
+                            <span>{{ __('Upload file(s)') }}</span>
                             <input
                                 id="file_upload"
-                                name="file_upload"
+                                :name="currentType.multiple_file ? 'file_upload[]' : 'file_upload'"
                                 type="file"
+                                :multiple="!!currentType.multiple_file"
+                                x-ref="fileUploadInput"
                                 class="sr-only"
                                 @change="updateFileInput"
                                 :accept="acceptTypes"
@@ -56,6 +70,14 @@
                         </label>
                         <p class="pl-1">{{ __('or drag and drop')}}</p>
                     </div>
+
+                    <template x-if="selectedFileLabel">
+                        <p class="text-xs text-gray-600" x-text="selectedFileLabel"></p>
+                    </template>
+
+                    <template x-if="selectedNonImageCount > 0">
+                        <p class="text-xs text-gray-500" x-text="`${selectedNonImageCount} non-image file(s) selected`"></p>
+                    </template>
 
                     <template x-if="currentType.is_file">
                         <p class="text-xs text-gray-500" x-text="'Allowed: ' + currentType.extension_whitelist"></p>
@@ -140,4 +162,5 @@
     </div>
 
     <x-input-error class="mt-2" :messages="$errors->get('file_upload')" />
+    <x-input-error class="mt-2" :messages="$errors->get('file_upload.*')" />
 </form>
