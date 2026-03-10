@@ -29,60 +29,144 @@
         </div>
 
         <div x-show="selectedType && currentType.is_file" class="flex-1" x-transition.opacity>
-            <x-input-label for="file_upload" x-text="'Upload ' + (currentType.name || 'File')" :required="true"/>
+            <x-input-label for="file_upload" x-text="'{{ __('Upload') }} ' + (currentType.name || 'File')" :required="true"/>
 
             <div
-                class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md relative transition"
-                :class="dragActive ? 'border-[#077CB6] bg-[#e7f4fb]' : 'border-gray-300 hover:bg-gray-50'"
+                class="mt-1 relative overflow-hidden rounded-2xl border-2 border-dashed transition"
+                :class="isSingleSelectedFile || dragActive ? 'border-[#077CB6] bg-[#e7f4fb]' : 'border-gray-300 hover:bg-gray-50'"
                 @dragenter.prevent="handleDragEnter"
                 @dragover.prevent="handleDragOver"
                 @dragleave.prevent="handleDragLeave"
                 @drop.prevent="handleDrop"
             >
-                <div class="space-y-1 text-center">
-                    {{-- Preview selected image files before submit. --}}
-                    <template x-if="fileImagePreviews.length > 0">
-                        <div class="grid grid-cols-2 gap-2 mb-2">
-                            <template x-for="preview in fileImagePreviews" :key="preview.url">
-                                <img :src="preview.url" :alt="preview.name" class="mx-auto h-24 w-full object-cover rounded">
+                <input
+                    id="file_upload"
+                    :name="currentType.multiple_file ? 'file_upload[]' : 'file_upload'"
+                    type="file"
+                    :multiple="!!currentType.multiple_file"
+                    x-ref="fileUploadInput"
+                    class="sr-only"
+                    @change="updateFileInput"
+                    :accept="acceptTypes"
+                >
+
+                <template x-if="isSingleSelectedFile">
+                    <div class="group relative flex min-h-[17rem] items-center justify-center p-6">
+                        <button
+                            type="button"
+                            class="absolute inset-0 z-10"
+                            @click="$refs.fileUploadInput.click()"
+                            :aria-label="'Replace ' + (currentType.name || 'file')"
+                        ></button>
+
+                        <template x-if="selectedFileItems[0]?.previewUrl">
+                            <div class="relative">
+                                <img
+                                    :src="selectedFileItems[0].previewUrl"
+                                    :alt="selectedFileItems[0].name"
+                                    class="pointer-events-none max-h-64 max-w-full rounded-xl object-contain shadow-lg transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80"
+                                >
+                                <button
+                                    type="button"
+                                    class="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-red-500/0 text-white opacity-0 transition duration-200 ease-out group-hover:bg-red-500/75 group-hover:opacity-100"
+                                    @click.stop="removeSelectedFile(0)"
+                                    aria-label="{{ __('Remove file') }}"
+                                >
+                                    <x-icon name="x" class="h-14 w-14 scale-75 transition duration-200 ease-out group-hover:scale-100" />
+                                </button>
+                            </div>
+                        </template>
+
+                        <template x-if="!selectedFileItems[0]?.previewUrl">
+                            <div class="relative">
+                                <div class="pointer-events-none flex h-28 w-28 items-center justify-center rounded-3xl bg-white text-gray-500 shadow-lg transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80">
+                                    <x-icon name="upload-picture" class="h-12 w-12" />
+                                </div>
+                                <button
+                                    type="button"
+                                    class="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-red-500/0 text-white opacity-0 transition duration-200 ease-out group-hover:bg-red-500/75 group-hover:opacity-100"
+                                    @click.stop="removeSelectedFile(0)"
+                                    aria-label="{{ __('Remove file') }}"
+                                >
+                                    <x-icon name="x" class="h-10 w-10 scale-75 transition duration-200 ease-out group-hover:scale-100" />
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template x-if="currentType.multiple_file && hasSelectedFiles">
+                    <div class="space-y-4 p-4">
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <template x-for="(file, index) in selectedFileItems" :key="file.id">
+                                <article class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                                    <div class="relative flex h-36 items-center justify-center overflow-hidden bg-slate-100">
+                                        <template x-if="file.previewUrl">
+                                            <img :src="file.previewUrl" :alt="file.name" class="pointer-events-none h-full w-full object-cover transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80">
+                                        </template>
+
+                                        <template x-if="!file.previewUrl">
+                                            <div class="pointer-events-none flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-gray-500 shadow-sm transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80">
+                                                <x-icon name="upload-picture" class="h-10 w-10" />
+                                            </div>
+                                        </template>
+
+                                        <button
+                                            type="button"
+                                            class="absolute inset-0 z-20 flex items-center justify-center bg-red-500/0 text-white opacity-0 transition duration-200 ease-out group-hover:bg-red-500/75 group-hover:opacity-100"
+                                            @click.stop="removeSelectedFile(index)"
+                                            :aria-label="'Remove ' + file.name"
+                                        >
+                                            <x-icon name="x" class="h-12 w-12 scale-75 transition duration-200 ease-out group-hover:scale-100" />
+                                        </button>
+                                    </div>
+
+                                    <div class="space-y-1 p-3">
+                                        <p class="truncate text-sm font-semibold text-gray-900" x-text="file.name"></p>
+                                        <div class="flex items-center justify-between gap-2 text-xs text-gray-500">
+                                            <span x-text="file.kindLabel"></span>
+                                            <span x-text="file.sizeLabel"></span>
+                                        </div>
+                                    </div>
+                                </article>
                             </template>
                         </div>
-                    </template>
 
-                    {{-- Generic icon for non-image files or no selection. --}}
-                    <template x-if="fileImagePreviews.length === 0">
-                        <x-icon name="upload-picture" class="mx-auto h-12 w-12 text-gray-400" />
-                    </template>
-
-                    <div class="flex text-sm text-gray-600 justify-center">
-                        <label for="file_upload" class="relative cursor-pointer bg-white rounded-md font-medium text-[#077CB6] hover:text-[#E69C24] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-[#E69C24]">
-                            <span>{{ __('Upload file(s)') }}</span>
-                            <input
-                                id="file_upload"
-                                :name="currentType.multiple_file ? 'file_upload[]' : 'file_upload'"
-                                type="file"
-                                :multiple="!!currentType.multiple_file"
-                                x-ref="fileUploadInput"
-                                class="sr-only"
-                                @change="updateFileInput"
-                                :accept="acceptTypes"
+                        <div class="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3">
+                            <button
+                                type="button"
+                                class="rounded-full bg-[#077CB6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#066a9c]"
+                                @click="$refs.fileUploadInput.click()"
                             >
-                        </label>
-                        <p class="pl-1">{{ __('or drag and drop')}}</p>
+                                {{ __('Add files') }}
+                            </button>
+                            <p class="text-xs text-gray-500">{{ __('or drag and drop more files') }}</p>
+                        </div>
+
+                        <p class="text-center text-xs text-gray-500" x-text="'Allowed: ' + currentType.extension_whitelist"></p>
                     </div>
+                </template>
 
-                    <template x-if="selectedFileLabel">
-                        <p class="text-xs text-gray-600" x-text="selectedFileLabel"></p>
-                    </template>
+                <template x-if="!hasSelectedFiles">
+                    <div class="space-y-3 px-6 py-8 text-center">
+                        <x-icon name="upload-picture" class="mx-auto h-12 w-12 text-gray-400" />
 
-                    <template x-if="selectedNonImageCount > 0">
-                        <p class="text-xs text-gray-500" x-text="`${selectedNonImageCount} non-image file(s) selected`"></p>
-                    </template>
+                        <div class="flex justify-center text-sm text-gray-600">
+                            <button
+                                type="button"
+                                class="rounded-md bg-white font-medium text-[#077CB6] transition hover:text-[#E69C24] focus:outline-none focus:ring-2 focus:ring-[#E69C24] focus:ring-offset-2"
+                                @click="$refs.fileUploadInput.click()"
+                            >
+                                {{ __('Upload file(s)') }}
+                            </button>
+                            <p class="pl-1">{{ __('or drag and drop') }}</p>
+                        </div>
 
-                    <template x-if="currentType.is_file">
-                        <p class="text-xs text-gray-500" x-text="'Allowed: ' + currentType.extension_whitelist"></p>
-                    </template>
-                </div>
+                        <template x-if="currentType.is_file">
+                            <p class="text-xs text-gray-500" x-text="'Allowed: ' + currentType.extension_whitelist"></p>
+                        </template>
+                    </div>
+                </template>
             </div>
         </div>
     </div>

@@ -25,33 +25,83 @@
     <div class="py-12" x-data="{ 
         selectedType: '{{ old('type_id', '') }}',
         types: {{ $contentTypes->mapWithKeys(fn($i) => [$i->id => $i])->toJson() }},
-        fileNames: [],
-        fileImagePreviews: [],
-        selectedNonImageCount: 0,
+        selectedFiles: [],
+        selectedFileItems: [],
         dragActive: false,
         dragDepth: 0,
 
-        clearImagePreviews() {
-            this.fileImagePreviews.forEach(preview => URL.revokeObjectURL(preview.url));
-            this.fileImagePreviews = [];
+        clearSelectedFiles() {
+            this.selectedFileItems.forEach(item => {
+                if (item.previewUrl) {
+                    URL.revokeObjectURL(item.previewUrl);
+                }
+            });
+
+            this.selectedFiles = [];
+            this.selectedFileItems = [];
+        },
+
+        normalizeFiles(files) {
+            return this.currentType.multiple_file ? files : files.slice(0, 1);
+        },
+
+        fileKindLabel(file) {
+            if (file.type.startsWith('image/')) {
+                return 'Image';
+            }
+
+            if (file.type.startsWith('video/')) {
+                return 'Video';
+            }
+
+            const extension = file.name.split('.').pop();
+            return extension ? extension.toUpperCase() : 'File';
+        },
+
+        formatFileSize(bytes) {
+            if (!Number.isFinite(bytes) || bytes <= 0) {
+                return '';
+            }
+
+            if (bytes < 1024 * 1024) {
+                return `${Math.round(bytes / 1024)} KB`;
+            }
+
+            return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        },
+
+        syncInputFiles() {
+            const fileInput = this.$refs.fileUploadInput;
+            if (!fileInput) {
+                return;
+            }
+
+            if (this.selectedFiles.length === 0) {
+                fileInput.value = '';
+                return;
+            }
+
+            if (typeof DataTransfer === 'undefined') {
+                return;
+            }
+
+            const dataTransfer = new DataTransfer();
+            this.selectedFiles.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
         },
 
         applyFiles(files) {
-            this.clearImagePreviews();
-            this.fileNames = files.map(file => file.name);
-            this.selectedNonImageCount = 0;
+            const normalizedFiles = this.normalizeFiles(files);
 
-            files.forEach(file => {
-                if (file.type.startsWith('image/')) {
-                    this.fileImagePreviews.push({
-                        name: file.name,
-                        url: URL.createObjectURL(file),
-                    });
-                    return;
-                }
-
-                this.selectedNonImageCount += 1;
-            });
+            this.clearSelectedFiles();
+            this.selectedFiles = normalizedFiles;
+            this.selectedFileItems = normalizedFiles.map((file, index) => ({
+                id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+                name: file.name,
+                previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+                kindLabel: this.fileKindLabel(file),
+                sizeLabel: this.formatFileSize(file.size),
+            }));
         },
 
         updateFileInput(event) {
@@ -62,9 +112,7 @@
         handleTypeChange() {
             this.dragActive = false;
             this.dragDepth = 0;
-            this.fileNames = [];
-            this.selectedNonImageCount = 0;
-            this.clearImagePreviews();
+            this.clearSelectedFiles();
 
             const fileInput = this.$refs.fileUploadInput;
             if (fileInput) {
@@ -114,16 +162,14 @@
                 return;
             }
 
-            const fileInput = this.$refs.fileUploadInput;
-            if (!fileInput || typeof DataTransfer === 'undefined') {
-                return;
-            }
-
-            const dataTransfer = new DataTransfer();
-            files.forEach(file => dataTransfer.items.add(file));
-            fileInput.files = dataTransfer.files;
-
             this.applyFiles(files);
+            this.syncInputFiles();
+        },
+
+        removeSelectedFile(index) {
+            const nextFiles = this.selectedFiles.filter((_, currentIndex) => currentIndex !== index);
+            this.applyFiles(nextFiles);
+            this.syncInputFiles();
         },
         
         get currentType() {
@@ -157,16 +203,12 @@
             }).join(',');
         },
 
-        get selectedFileLabel() {
-            if (this.fileNames.length === 0) {
-                return '';
-            }
+        get hasSelectedFiles() {
+            return this.selectedFileItems.length > 0;
+        },
 
-            if (this.fileNames.length === 1) {
-                return this.fileNames[0];
-            }
-
-            return `${this.fileNames.length} files selected`;
+        get isSingleSelectedFile() {
+            return this.hasSelectedFiles && !this.currentType.multiple_file;
         }
     }">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
