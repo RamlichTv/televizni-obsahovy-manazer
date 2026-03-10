@@ -176,6 +176,8 @@
                                         $itemUrl = (string) ($file['url'] ?? '');
                                         $itemMime = strtolower((string) ($file['mime_type'] ?? ''));
                                         $itemName = (string) ($file['original_filename'] ?? '');
+                                        $itemPath = strtolower((string) (parse_url($itemUrl, PHP_URL_PATH) ?: $itemUrl));
+                                        $itemIsPdf = $itemUrl !== '' && ($itemMime === 'application/pdf' || str_ends_with($itemPath, '.pdf') || str_ends_with(strtolower($itemName), '.pdf'));
                                     @endphp
 
                                     <article class="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -191,6 +193,14 @@
                                             <p class="mt-1 text-[11px] text-gray-500">{{ __('Click image to zoom') }}</p>
                                         @elseif ($itemUrl !== '' && str_starts_with($itemMime, 'video/'))
                                             <video src="{{ $itemUrl }}" controls class="h-48 w-full rounded object-cover"></video>
+                                        @elseif ($itemIsPdf)
+                                            <div class="overflow-hidden rounded border border-gray-200 bg-white">
+                                                <iframe src="{{ $itemUrl }}" title="{{ $itemName !== '' ? $itemName : __('PDF preview') }}" class="h-64 w-full bg-white"></iframe>
+                                            </div>
+                                            <div class="mt-2 flex items-center justify-between gap-2 text-[11px] text-gray-500">
+                                                <span class="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">PDF</span>
+                                                <a href="{{ $itemUrl }}" target="_blank" class="text-[#077CB6] underline">{{ __('Open PDF') }}</a>
+                                            </div>
                                         @else
                                             <div class="flex h-48 items-center justify-center rounded border border-dashed border-gray-300 bg-white text-center text-sm text-gray-500">
                                                 <a href="{{ $itemUrl }}" target="_blank" class="text-[#077CB6] underline">{{ __('Download file') }}</a>
@@ -209,6 +219,9 @@
                             $primaryFile = $fileItems->first();
                             $url = (string) ($primaryFile['url'] ?? '');
                             $mime = strtolower((string) ($primaryFile['mime_type'] ?? ''));
+                            $name = (string) ($primaryFile['original_filename'] ?? $content->name);
+                            $path = strtolower((string) (parse_url($url, PHP_URL_PATH) ?: $url));
+                            $isPdf = $url !== '' && ($mime === 'application/pdf' || str_ends_with($path, '.pdf') || str_ends_with(strtolower($name), '.pdf'));
                         @endphp
 
                         <div class="flex min-h-75 items-center justify-center">
@@ -226,6 +239,15 @@
                                 </div>
                             @elseif ($url !== '' && str_starts_with($mime, 'video/'))
                                 <video src="{{ $url }}" controls class="max-w-full max-h-150 rounded shadow-lg"></video>
+                            @elseif ($isPdf)
+                                <div class="w-full">
+                                    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                                        <iframe src="{{ $url }}" title="{{ $name }}" class="h-[75vh] w-full bg-white"></iframe>
+                                    </div>
+                                    <div class="mt-3 text-center">
+                                        <a href="{{ $url }}" target="_blank" class="text-sm text-[#077CB6] underline">{{ __('Open PDF in new tab') }}</a>
+                                    </div>
+                                </div>
                             @else
                                 <div class="text-center text-gray-400 p-12">
                                     <span class="text-6xl block mb-4">📄</span>

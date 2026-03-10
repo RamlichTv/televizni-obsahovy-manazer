@@ -68,29 +68,60 @@
                      x-data="{
                         hasNewFile: false,
                         newFileLabel: '',
-                        newImagePreviews: [],
-                        selectedNonImageCount: 0,
+                        newPreviewItems: [],
+                        selectedNonPreviewCount: 0,
+                        previewKind(file) {
+                            const lowerName = (file.name || '').toLowerCase();
+
+                            if (file.type.startsWith('image/')) {
+                                return 'image';
+                            }
+
+                            if (file.type === 'application/pdf' || lowerName.endsWith('.pdf')) {
+                                return 'pdf';
+                            }
+
+                            return null;
+                        },
+                        fileKindLabel(file) {
+                            if (file.type.startsWith('image/')) {
+                                return 'Image';
+                            }
+
+                            if (file.type === 'application/pdf' || (file.name || '').toLowerCase().endsWith('.pdf')) {
+                                return 'PDF';
+                            }
+
+                            if (file.type.startsWith('video/')) {
+                                return 'Video';
+                            }
+
+                            const extension = (file.name || '').split('.').pop();
+                            return extension ? extension.toUpperCase() : 'File';
+                        },
                         clearPreviews() {
-                            this.newImagePreviews.forEach(preview => URL.revokeObjectURL(preview.url));
-                            this.newImagePreviews = [];
+                            this.newPreviewItems.forEach(preview => {
+                                if (preview.previewUrl) {
+                                    URL.revokeObjectURL(preview.previewUrl);
+                                }
+                            });
+                            this.newPreviewItems = [];
                         },
                         applySelectedFiles(files) {
                             this.clearPreviews();
                             this.hasNewFile = files.length > 0;
                             this.newFileLabel = files.length > 1 ? `${files.length} files selected` : (files[0]?.name || '');
-                            this.selectedNonImageCount = 0;
+                            this.newPreviewItems = files.map(file => {
+                                const previewKind = this.previewKind(file);
 
-                            files.forEach(file => {
-                                if (file.type.startsWith('image/')) {
-                                    this.newImagePreviews.push({
-                                        name: file.name,
-                                        url: URL.createObjectURL(file),
-                                    });
-                                    return;
-                                }
-
-                                this.selectedNonImageCount += 1;
+                                return {
+                                    name: file.name,
+                                    previewKind,
+                                    previewUrl: previewKind ? URL.createObjectURL(file) : null,
+                                    kindLabel: this.fileKindLabel(file),
+                                };
                             });
+                            this.selectedNonPreviewCount = this.newPreviewItems.filter(file => !file.previewKind).length;
                         },
                         setPreview(event) {
                             const files = Array.from(event.target.files || []);
@@ -114,12 +145,18 @@
                                                 $itemUrl = (string) ($file['url'] ?? '');
                                                 $itemMime = strtolower((string) ($file['mime_type'] ?? ''));
                                                 $itemName = (string) ($file['original_filename'] ?? '');
+                                                $itemPath = strtolower((string) (parse_url($itemUrl, PHP_URL_PATH) ?: $itemUrl));
+                                                $itemIsPdf = $itemUrl !== '' && ($itemMime === 'application/pdf' || str_ends_with($itemPath, '.pdf') || str_ends_with(strtolower($itemName), '.pdf'));
                                             @endphp
                                             <article class="rounded-lg border border-gray-200 bg-white p-2">
                                                 @if ($itemUrl !== '' && str_starts_with($itemMime, 'image/'))
                                                     <img src="{{ $itemUrl }}" alt="{{ $itemName }}" class="h-32 w-full rounded object-cover">
                                                 @elseif ($itemUrl !== '' && str_starts_with($itemMime, 'video/'))
                                                     <video src="{{ $itemUrl }}" controls class="h-32 w-full rounded object-cover"></video>
+                                                @elseif ($itemIsPdf)
+                                                    <div class="overflow-hidden rounded border border-gray-200 bg-white">
+                                                        <iframe src="{{ $itemUrl }}" title="{{ $itemName !== '' ? $itemName : __('PDF preview') }}" class="h-40 w-full bg-white"></iframe>
+                                                    </div>
                                                 @else
                                                     <div class="flex h-32 items-center justify-center rounded border border-dashed border-gray-300 text-xs text-gray-500">
                                                         <a href="{{ $itemUrl }}" target="_blank" class="text-[#077CB6] underline">{{ __('Download file') }}</a>
@@ -138,34 +175,60 @@
                                     $url = (string) ($primaryFile['url'] ?? '');
                                     $mime = strtolower((string) ($primaryFile['mime_type'] ?? ''));
                                     $name = (string) ($primaryFile['original_filename'] ?? 'Unknown');
+                                    $path = strtolower((string) (parse_url($url, PHP_URL_PATH) ?: $url));
+                                    $isPdf = $url !== '' && ($mime === 'application/pdf' || str_ends_with($path, '.pdf') || str_ends_with(strtolower($name), '.pdf'));
                                 @endphp
                                 <div class="flex justify-center">
                                     @if($url !== '' && str_starts_with($mime, 'image/'))
                                         <img src="{{ $url }}" class="max-h-64 rounded shadow-sm">
                                     @elseif($url !== '' && str_starts_with($mime, 'video/'))
                                         <video src="{{ $url }}" controls class="max-h-64 rounded shadow-sm"></video>
+                                    @elseif($isPdf)
+                                        <div class="w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                                            <iframe src="{{ $url }}" title="{{ $name }}" class="h-[32rem] w-full bg-white"></iframe>
+                                        </div>
                                     @else
-                                        <span class="text-gray-500">{{ __('Current file:') }} {{ $name }}</span>
+                                        <div class="text-center text-gray-500">
+                                            <span>{{ __('Current file:') }} {{ $name }}</span>
+                                            @if ($url !== '')
+                                                <div class="mt-2">
+                                                    <a href="{{ $url }}" target="_blank" class="text-[#077CB6] underline">{{ __('Download file') }}</a>
+                                                </div>
+                                            @endif
+                                        </div>
                                     @endif
                                 </div>
                             @endif
                         </div>
                         <div x-show="hasNewFile" class="text-center">
-                            <template x-if="newImagePreviews.length > 0">
-                                <div class="grid grid-cols-2 gap-2">
-                                    <template x-for="preview in newImagePreviews" :key="preview.url">
-                                        <img :src="preview.url" :alt="preview.name" class="h-32 w-full rounded object-cover shadow-sm">
+                            <template x-if="newPreviewItems.length > 0">
+                                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <template x-for="preview in newPreviewItems.filter(file => file.previewKind)" :key="preview.previewUrl">
+                                        <div class="overflow-hidden rounded border border-gray-200 bg-white shadow-sm">
+                                            <template x-if="preview.previewKind === 'image'">
+                                                <img :src="preview.previewUrl" :alt="preview.name" class="h-32 w-full object-cover">
+                                            </template>
+
+                                            <template x-if="preview.previewKind === 'pdf'">
+                                                <iframe :src="preview.previewUrl" :title="preview.name" class="h-40 w-full bg-white"></iframe>
+                                            </template>
+
+                                            <div class="border-t border-gray-100 px-3 py-2 text-left">
+                                                <p class="truncate text-xs font-medium text-gray-700" x-text="preview.name"></p>
+                                                <p class="text-[11px] uppercase tracking-wide text-gray-400" x-text="preview.kindLabel"></p>
+                                            </div>
+                                        </div>
                                     </template>
                                 </div>
                             </template>
-                            <template x-if="newImagePreviews.length === 0">
+                            <template x-if="newPreviewItems.filter(file => file.previewKind).length === 0">
                                 <span class="text-gray-500" x-text="newFileLabel || '{{ __('Selected files') }}'"></span>
                             </template>
                         </div>
                     </div>
                     <p x-show="hasNewFile && newFileLabel" class="mb-2 text-xs text-gray-500" x-text="newFileLabel"></p>
-                    <template x-if="hasNewFile && selectedNonImageCount > 0">
-                        <p class="mb-3 text-xs text-gray-500" x-text="`${selectedNonImageCount} non-image file(s) selected`"></p>
+                    <template x-if="hasNewFile && selectedNonPreviewCount > 0">
+                        <p class="mb-3 text-xs text-gray-500" x-text="`${selectedNonPreviewCount} file(s) without preview selected`"></p>
                     </template>
 
                     {{-- Upload new file --}}

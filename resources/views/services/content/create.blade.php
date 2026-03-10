@@ -45,9 +45,27 @@
             return this.currentType.multiple_file ? files : files.slice(0, 1);
         },
 
+        previewKind(file) {
+            const lowerName = (file.name || '').toLowerCase();
+
+            if (file.type.startsWith('image/')) {
+                return 'image';
+            }
+
+            if (file.type === 'application/pdf' || lowerName.endsWith('.pdf')) {
+                return 'pdf';
+            }
+
+            return null;
+        },
+
         fileKindLabel(file) {
             if (file.type.startsWith('image/')) {
                 return 'Image';
+            }
+
+            if (file.type === 'application/pdf' || (file.name || '').toLowerCase().endsWith('.pdf')) {
+                return 'PDF';
             }
 
             if (file.type.startsWith('video/')) {
@@ -95,13 +113,18 @@
 
             this.clearSelectedFiles();
             this.selectedFiles = normalizedFiles;
-            this.selectedFileItems = normalizedFiles.map((file, index) => ({
-                id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
-                name: file.name,
-                previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-                kindLabel: this.fileKindLabel(file),
-                sizeLabel: this.formatFileSize(file.size),
-            }));
+            this.selectedFileItems = normalizedFiles.map((file, index) => {
+                const previewKind = this.previewKind(file);
+
+                return {
+                    id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+                    name: file.name,
+                    previewKind,
+                    previewUrl: previewKind ? URL.createObjectURL(file) : null,
+                    kindLabel: this.fileKindLabel(file),
+                    sizeLabel: this.formatFileSize(file.size),
+                };
+            });
         },
 
         updateFileInput(event) {

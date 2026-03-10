@@ -59,7 +59,7 @@
                             :aria-label="'Replace ' + (currentType.name || 'file')"
                         ></button>
 
-                        <template x-if="selectedFileItems[0]?.previewUrl">
+                        <template x-if="selectedFileItems[0]?.previewKind === 'image'">
                             <div class="relative">
                                 <img
                                     :src="selectedFileItems[0].previewUrl"
@@ -77,7 +77,30 @@
                             </div>
                         </template>
 
-                        <template x-if="!selectedFileItems[0]?.previewUrl">
+                        <template x-if="selectedFileItems[0]?.previewKind === 'pdf'">
+                            <div class="relative overflow-hidden rounded-xl bg-white shadow-lg">
+                                <iframe
+                                    :src="selectedFileItems[0].previewUrl"
+                                    :title="selectedFileItems[0].name"
+                                    class="pointer-events-none h-64 w-[min(36rem,72vw)] max-w-full rounded-xl bg-white transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80"
+                                ></iframe>
+
+                                <div class="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                                    {{ __('PDF Preview') }}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-red-500/0 text-white opacity-0 transition duration-200 ease-out group-hover:bg-red-500/75 group-hover:opacity-100"
+                                    @click.stop="removeSelectedFile(0)"
+                                    aria-label="{{ __('Remove file') }}"
+                                >
+                                    <x-icon name="x" class="h-14 w-14 scale-75 transition duration-200 ease-out group-hover:scale-100" />
+                                </button>
+                            </div>
+                        </template>
+
+                        <template x-if="!selectedFileItems[0]?.previewKind">
                             <div class="relative">
                                 <div class="pointer-events-none flex h-28 w-28 items-center justify-center rounded-3xl bg-white text-gray-500 shadow-lg transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80">
                                     <x-icon name="upload-picture" class="h-12 w-12" />
@@ -101,11 +124,20 @@
                             <template x-for="(file, index) in selectedFileItems" :key="file.id">
                                 <article class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                                     <div class="relative flex h-36 items-center justify-center overflow-hidden bg-slate-100">
-                                        <template x-if="file.previewUrl">
+                                        <template x-if="file.previewKind === 'image'">
                                             <img :src="file.previewUrl" :alt="file.name" class="pointer-events-none h-full w-full object-cover transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80">
                                         </template>
 
-                                        <template x-if="!file.previewUrl">
+                                        <template x-if="file.previewKind === 'pdf'">
+                                            <div class="relative h-full w-full overflow-hidden bg-white">
+                                                <iframe :src="file.previewUrl" :title="file.name" class="pointer-events-none h-full w-full bg-white transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80"></iframe>
+                                                <div class="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">
+                                                    PDF
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="!file.previewKind">
                                             <div class="pointer-events-none flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-gray-500 shadow-sm transition duration-200 ease-out group-hover:scale-[0.985] group-hover:opacity-80">
                                                 <x-icon name="upload-picture" class="h-10 w-10" />
                                             </div>
