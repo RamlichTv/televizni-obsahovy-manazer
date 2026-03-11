@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -101,5 +102,22 @@ class Screen extends Model
     public function events() : HasMany {
         return $this->hasMany(Event::class);
     }
-}
 
+    /**
+     * Screensaver modules assigned directly to this screen.
+     *
+     * Cardinality:
+     * - one screen has zero or one screensaver module.
+     * - each screensaver module is bound to at most one screen.
+     *
+     * @return BelongsToMany
+     */
+    public function screensaverModules(): BelongsToMany
+    {
+        return $this->belongsToMany(Module::class, 'screen_screensaver_modules', 'screen_id', 'module_id')
+            ->withPivot('order')
+            ->withTimestamps()
+            ->orderBy('screen_screensaver_modules.order')
+            ->orderBy('modules.name');
+    }
+}

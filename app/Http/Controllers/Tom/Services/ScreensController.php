@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tom\Services\ScreenRequest;
 use App\Models\Building;
 use App\Models\Floor;
+use App\Models\Module;
 use App\Models\Profile;
 use App\Models\Room;
 use App\Models\Screen;
 use App\Models\ScreenOrientation;
 use App\Models\ScreenStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -26,15 +28,24 @@ class ScreensController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
+        $buildingIds = $this->normalizeIdFilter(
+            values: $request->query('building_ids', $request->query('building_id', [])),
+        );
+        $floorIds = $this->normalizeIdFilter(
+            values: $request->query('floor_ids', $request->query('floor_id', [])),
+        );
+        $roomIds = $this->normalizeIdFilter(
+            values: $request->query('room_ids', $request->query('room_id', [])),
+        );
 
         $screensQuery = Screen::query()
             ->with([
                 'status:id,name',
                 'profile:id,name,slug',
                 'orientation:id,name',
-                'room:id,name,building_id,floor_id',
-                'room.building:id,name',
-                'room.floor:id,name',
+                'room:id,name,floor_id',
+                'room.floor:id,name,building_id',
+                'room.floor.building:id,name',
             ]);
 
         if ($search !== '') {
@@ -46,15 +57,28 @@ class ScreensController extends Controller
                     })
                     ->orWhereHas('room', function ($roomQuery) use ($search): void {
                         $roomQuery->where('name', 'like', '%' . $search . '%')
-                            ->orWhereHas('building', function ($buildingQuery) use ($search): void {
-                                $buildingQuery->where('name', 'like', '%' . $search . '%');
-                            })
                             ->orWhereHas('floor', function ($floorQuery) use ($search): void {
-                                $floorQuery->where('name', 'like', '%' . $search . '%');
+                                $floorQuery->where('name', 'like', '%' . $search . '%')
+                                    ->orWhereHas('building', function ($buildingQuery) use ($search): void {
+                                        $buildingQuery->where('name', 'like', '%' . $search . '%');
+                                    });
                             });
                     });
             });
         }
+
+        $screensQuery
+            ->when($buildingIds !== [], function (Builder $query) use ($buildingIds): void {
+                $query->whereHas('room.floor', function (Builder $floorQuery) use ($buildingIds): void {
+                    $floorQuery->whereIn('building_id', $buildingIds);
+                });
+            })
+            ->when($floorIds !== [], function (Builder $query) use ($floorIds): void {
+                $query->whereHas('room', function (Builder $roomQuery) use ($floorIds): void {
+                    $roomQuery->whereIn('floor_id', $floorIds);
+                });
+            })
+            ->when($roomIds !== [], fn (Builder $query) => $query->whereIn('room_id', $roomIds));
 
         $screens = $screensQuery
             ->orderBy('name')
@@ -80,6 +104,9 @@ class ScreensController extends Controller
                 'screens' => $screens,
                 'filters' => [
                     'search' => $search,
+                    'building_ids' => $buildingIds,
+                    'floor_ids' => $floorIds,
+                    'room_ids' => $roomIds,
                 ],
                 'searchSuggestions' => $searchSuggestions,
             ],
@@ -119,9 +146,11 @@ class ScreensController extends Controller
         $screen->loadMissing([
             'status:id,name',
             'orientation:id,name',
-            'room:id,name,building_id,floor_id',
-            'room.building:id,name',
-            'room.floor:id,name',
+            'room:id,name,floor_id',
+            'room.floor:id,name,building_id',
+            'room.floor.building:id,name',
+            'screensaverModules:id,name,category,is_active',
+            'screensaverModules.moduleCategory:id,name,is_screensaver',
             'profile:id,name,slug,settings',
             'profile.pages' => fn ($query) => $query->orderBy('order')->orderBy('id'),
             'profile.pages.rows' => fn ($query) => $query->orderBy('index'),
@@ -159,6 +188,7 @@ class ScreensController extends Controller
                 fallbackStatusId: $defaultStatusId,
             )
         );
+        $this->syncScreensaverModules($screen, $validated);
 
         $this->logEvent(
             typeName: 'screen_created',
@@ -170,6 +200,7 @@ class ScreensController extends Controller
                 'hardware_id' => $screen->hardware_id,
                 'profile_id' => $screen->profile_id,
                 'room_id' => $screen->room_id,
+                'screensaver_module_id' => $screen->screensaverModules()->value('modules.id'),
             ],
             userId: $request->user()?->id,
             screenId: $screen->id,
@@ -192,12 +223,15 @@ class ScreensController extends Controller
             'status:id,name',
             'profile:id,name,slug',
             'orientation:id,name',
-            'room:id,name,building_id,floor_id',
+            'room:id,name,floor_id',
+            'room.floor:id,name,building_id',
+            'room.floor.building:id,name',
+            'screensaverModules:id,name,category,is_active',
         ]);
 
         return view('services.screens.edit', array_merge(
             ['screen' => $screen],
-            $this->screenFormData(),
+            $this->screenFormData($screen),
         ));
     }
 
@@ -218,6 +252,7 @@ class ScreensController extends Controller
             'room_id' => $screen->room_id,
             'status_id' => $screen->status_id,
             'orientation_id' => $screen->orientation_id,
+            'screensaver_module_id' => $screen->screensaverModules()->value('modules.id'),
         ];
 
         $screen->update(
@@ -226,6 +261,7 @@ class ScreensController extends Controller
                 fallbackStatusId: $screen->status_id,
             )
         );
+        $this->syncScreensaverModules($screen, $validated);
 
         $this->logEvent(
             typeName: 'screen_edited',
@@ -245,6 +281,8 @@ class ScreensController extends Controller
                 'new_status_id' => $screen->status_id,
                 'old_orientation_id' => $before['orientation_id'],
                 'new_orientation_id' => $screen->orientation_id,
+                'old_screensaver_module_id' => $before['screensaver_module_id'],
+                'new_screensaver_module_id' => $screen->screensaverModules()->value('modules.id'),
             ],
             userId: $request->user()?->id,
             screenId: $screen->id,
@@ -290,8 +328,10 @@ class ScreensController extends Controller
      *
      * @return array
      */
-    private function screenFormData(): array
+    private function screenFormData(?Screen $screen = null): array
     {
+        $screenId = $screen?->id;
+
         return [
             'profiles' => Profile::query()
                 ->orderBy('name')
@@ -304,11 +344,26 @@ class ScreensController extends Controller
                 ->get(['id', 'name']),
             'rooms' => Room::query()
                 ->with([
-                    'building:id,name',
-                    'floor:id,name',
+                    'floor:id,name,building_id',
+                    'floor.building:id,name',
                 ])
                 ->orderBy('name')
-                ->get(['id', 'name', 'building_id', 'floor_id']),
+                ->get(['id', 'name', 'floor_id']),
+            'screensaverModules' => Module::query()
+                ->whereHas('moduleCategory', function (Builder $query): void {
+                    $query->where('is_screensaver', true);
+                })
+                ->where(function (Builder $query) use ($screenId): void {
+                    $query->whereDoesntHave('screensaverScreens');
+
+                    if (is_string($screenId) && trim($screenId) !== '') {
+                        $query->orWhereHas('screensaverScreens', function (Builder $screenQuery) use ($screenId): void {
+                            $screenQuery->where('screens.id', $screenId);
+                        });
+                    }
+                })
+                ->orderBy('name')
+                ->get(['id', 'name', 'category', 'is_active']),
         ];
     }
 
@@ -330,11 +385,11 @@ class ScreensController extends Controller
                 ->get(['id', 'building_id', 'name']),
             'rooms' => Room::query()
                 ->with([
-                    'building:id,name',
                     'floor:id,name,building_id',
+                    'floor.building:id,name',
                 ])
                 ->orderBy('name')
-                ->get(['id', 'building_id', 'floor_id', 'name']),
+                ->get(['id', 'floor_id', 'name']),
         ];
     }
 
@@ -370,6 +425,63 @@ class ScreensController extends Controller
                 ? $validated['ip_blacklist']
                 : null,
         ];
+    }
+
+    /**
+     * Normalize array-like filter input into unique integer IDs.
+     *
+     * @param mixed $values
+     * @return array<int>
+     */
+    private function normalizeIdFilter(mixed $values): array
+    {
+        $items = is_array($values) ? $values : [$values];
+
+        return collect($items)
+            ->map(fn ($value): int => (int) trim((string) $value))
+            ->filter(fn (int $value): bool => $value > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Persist ordered screensaver-module bindings for a screen.
+     *
+     * @param Screen $screen
+     * @param array $validated
+     * @return void
+     */
+    private function syncScreensaverModules(Screen $screen, array $validated): void
+    {
+        $requestedId = trim((string) ($validated['screensaver_module_id'] ?? ''));
+        if ($requestedId === '') {
+            $screen->screensaverModules()->sync([]);
+
+            return;
+        }
+
+        // Re-check server-side that only one allowed screensaver module can be bound.
+        $allowedModuleId = Module::query()
+            ->where('id', $requestedId)
+            ->whereHas('moduleCategory', function (Builder $query): void {
+                $query->where('is_screensaver', true);
+            })
+            ->where(function (Builder $query) use ($screen): void {
+                $query->whereDoesntHave('screensaverScreens')
+                    ->orWhereHas('screensaverScreens', function (Builder $screenQuery) use ($screen): void {
+                        $screenQuery->where('screens.id', $screen->id);
+                    });
+            })
+            ->value('id');
+
+        if (!is_string($allowedModuleId) || trim($allowedModuleId) === '') {
+            $screen->screensaverModules()->sync([]);
+
+            return;
+        }
+
+        $screen->screensaverModules()->sync([(string) $allowedModuleId => ['order' => 0]]);
     }
 
     /**

@@ -10,17 +10,26 @@
 @php
     // Normalize labels in one place so markup stays focused on layout only.
     $statusRaw = trim((string) ($screen->status?->name ?? ''));
-    $statusLabel = $statusRaw !== '' ? ucfirst($statusRaw) : __('Unknown');
-    $orientationLabel = $screen->orientation?->name ? ucfirst((string) $screen->orientation->name) : __('Unassigned');
+    $orientationRaw = strtolower((string) ($screen->orientation?->name ?? ''));
+    $statusLabel = $statusRaw !== '' ? ucfirst(__($statusRaw)) : __('Unknown');
+    $orientationLabel = $screen->orientation?->name ? ucfirst(__((string) $screen->orientation->name)) : __('Unassigned');
     $profileLabel = $screen->profile?->name ?? __('Unassigned');
     $hardwareLabel = $screen->hardware_id ?: __('No hardware ID');
-    $resolutionLabel = ($screen->width && $screen->height) ? ($screen->width . ' x ' . $screen->height) : __('Not set');
+    $resolutionWidth = (int) ($screen->width ?? 0);
+    $resolutionHeight = (int) ($screen->height ?? 0);
 
-    // Room label intentionally flattens building + room into one compact line.
-    $roomLabel = $screen->room?->name ?? __('Unassigned');
-    if ($screen->room?->building?->name) {
-        $roomLabel = $screen->room->building->name . ' / ' . $roomLabel;
+    if ($orientationRaw === 'portrait' && $resolutionWidth > $resolutionHeight) {
+        [$resolutionWidth, $resolutionHeight] = [$resolutionHeight, $resolutionWidth];
+    } elseif ($orientationRaw === 'landscape' && $resolutionHeight > $resolutionWidth) {
+        [$resolutionWidth, $resolutionHeight] = [$resolutionHeight, $resolutionWidth];
     }
+
+    $resolutionLabel = ($resolutionWidth > 0 && $resolutionHeight > 0)
+        ? ($resolutionWidth . ' x ' . $resolutionHeight)
+        : __('Not set');
+
+    // Room label mirrors the building > floor > room breadcrumb used elsewhere.
+    $roomLabel = $screen->room?->breadcrumbLabel(' > ') ?: __('Unassigned');
 
     // "Online-like" statuses get a green badge, everything else amber.
     $isOnlineLike = in_array(strtolower($statusRaw), ['online', 'active', 'enabled', 'ready'], true);

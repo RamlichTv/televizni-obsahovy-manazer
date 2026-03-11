@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Tom\Services;
 
 use App\Models\Screen;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Validation\Rule;
 
 class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
@@ -38,12 +39,49 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'room_id' => ['nullable', 'integer', Rule::exists('rooms', 'id')],
             'description' => ['nullable', 'string', 'max:5000'],
             'is_interactive' => ['nullable', 'boolean'],
+            'auto_refresh_value' => ['nullable', 'integer'],
+            'auto_refresh_unit' => ['nullable', 'string', Rule::in(['seconds', 'minutes'])],
             'auto_refresh_interval' => ['nullable', 'integer', 'min:5', 'max:86400'],
             'last_seen_at' => ['nullable', 'date'],
             'ip_whitelist' => ['nullable', 'array'],
             'ip_whitelist.*' => ['string', 'ip'],
             'ip_blacklist' => ['nullable', 'array'],
             'ip_blacklist.*' => ['string', 'ip'],
+            'screensaver_module_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('modules', 'id')->where(function (Builder $query) use ($screenId): void {
+                    $query->whereIn('category', function (Builder $subquery): void {
+                        $subquery->select('id')
+                            ->from('module_categories')
+                            ->where('is_screensaver', true);
+                    });
+
+                    // One screensaver module can only be attached to one screen.
+                    $query->whereNotIn('id', function (Builder $subquery) use ($screenId): void {
+                        $subquery->select('module_id')
+                            ->from('screen_screensaver_modules')
+                            ->when(is_string($screenId) && trim($screenId) !== '', function (Builder $innerQuery) use ($screenId): void {
+                                $innerQuery->where('screen_id', '!=', $screenId);
+                            });
+                    });
+                }),
+            ],
+        ];
+    }
+
+    /**
+     * Validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'auto_refresh_value.integer' => __('Auto refresh value must be a whole number.'),
+            'auto_refresh_unit.in' => __('Auto refresh unit must be seconds or minutes.'),
+            'auto_refresh_interval.min' => __('Auto refresh must be at least 5 seconds.'),
+            'auto_refresh_interval.max' => __('Auto refresh cannot exceed 24 hours.'),
         ];
     }
 
@@ -86,9 +124,11 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'orientation_id',
             'room_id',
             'hardware_id',
+            'screensaver_module_id',
             'description',
             'height',
             'width',
+            'auto_refresh_value',
             'auto_refresh_interval',
             'last_seen_at',
         ];
@@ -103,6 +143,7 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
                 arrayInput: $this->input('ip_blacklist'),
                 textInput: $this->input('ip_blacklist_text'),
             ),
+            'screensaver_module_id' => trim((string) $this->input('screensaver_module_id', '')),
         ];
 
         foreach ($nullableFields as $field) {
@@ -111,6 +152,29 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
                 $normalized[$field] = null;
             }
         }
+
+        $refreshValue = $this->input('auto_refresh_value', $this->input('auto_refresh_interval'));
+        $refreshUnit = strtolower(trim((string) $this->input('auto_refresh_unit', 'seconds')));
+
+        if (is_string($refreshValue)) {
+            $refreshValue = trim($refreshValue);
+        }
+
+        if ($refreshValue === '' || $refreshValue === null) {
+            $normalized['auto_refresh_value'] = null;
+            $normalized['auto_refresh_interval'] = null;
+        } else {
+            $normalized['auto_refresh_value'] = $refreshValue;
+
+            if (
+                is_int($refreshValue)
+                || (is_string($refreshValue) && preg_match('/^\d+$/', $refreshValue) === 1)
+            ) {
+                $normalized['auto_refresh_interval'] = (int) $refreshValue * ($refreshUnit === 'minutes' ? 60 : 1);
+            }
+        }
+
+        $normalized['auto_refresh_unit'] = $refreshUnit;
 
         $this->merge($normalized);
     }

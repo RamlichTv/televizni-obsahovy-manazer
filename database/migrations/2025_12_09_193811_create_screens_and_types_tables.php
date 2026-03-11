@@ -48,12 +48,10 @@ class CreateScreensAndTypesTables extends Migration
         // ##########################################################
         Schema::create('rooms', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('building_id')->nullable();
             $table->unsignedBigInteger('floor_id')->nullable();
             $table->string('name');
             $table->timestamps();
 
-            $table->foreign('building_id')->references('id')->on('buildings')->onDelete('set null');
             $table->foreign('floor_id')->references('id')->on('floors')->onDelete('set null');
         });
 
@@ -82,10 +80,26 @@ class CreateScreensAndTypesTables extends Migration
             $table->foreign('orientation_id')->references('id')->on('orientation_types')->onDelete('set null');
             $table->foreign('room_id')->references('id')->on('rooms')->onDelete('set null');
         });
+
+        // screen_screensaver_modules
+        // ##########################################################
+        Schema::create('screen_screensaver_modules', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->uuid('screen_id');
+            $table->uuid('module_id');
+            $table->integer('order')->default(0);
+            $table->timestamps();
+
+            $table->foreign('screen_id')->references('id')->on('screens')->onDelete('cascade');
+            $table->foreign('module_id')->references('id')->on('modules')->onDelete('cascade');
+            $table->unique('screen_id');
+            $table->unique('module_id');
+        });
     }
 
     public function down() : void
     {
+        Schema::dropIfExists('screen_screensaver_modules');
         Schema::dropIfExists('screens');
         Schema::dropIfExists('rooms');
         Schema::dropIfExists('floors');

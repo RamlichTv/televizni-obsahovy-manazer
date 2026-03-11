@@ -80,6 +80,36 @@
     </x-slot>
 
     <section class="flex flex-col grow p-4 max-w-screen w-full mx-auto">
+        @php
+            $selectedBuildingIds = collect((array) ($filters['building_ids'] ?? []))
+                ->map(fn ($id) => (string) $id)
+                ->filter()
+                ->unique()
+                ->values();
+            $selectedFloorIds = collect((array) ($filters['floor_ids'] ?? []))
+                ->map(fn ($id) => (string) $id)
+                ->filter()
+                ->unique()
+                ->values();
+            $selectedRoomIds = collect((array) ($filters['room_ids'] ?? []))
+                ->map(fn ($id) => (string) $id)
+                ->filter()
+                ->unique()
+                ->values();
+            $buildingsForPicker = $buildings->map(fn ($building) => [
+                'id' => (string) $building->id,
+                'name' => $building->name,
+            ])->values();
+            $floorsForPicker = $floors->map(fn ($floor) => [
+                'id' => (string) $floor->id,
+                'name' => $floor->breadcrumbLabel(' > '),
+            ])->values();
+            $roomsForPicker = $rooms->map(fn ($room) => [
+                'id' => (string) $room->id,
+                'name' => $room->breadcrumbLabel(' > '),
+            ])->values();
+        @endphp
+
         {{-- Shared flash area for all screen/location operations. --}}
         @if (session('success'))
             <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
@@ -93,16 +123,48 @@
             </div>
         @endif
 
-        {{-- Lightweight search for screen cards. --}}
-        <form method="GET" class="mb-4 rounded-lg bg-white p-4 shadow">
-            <x-search-bar
-                class="flex-1"
-                :value="$filters['search'] ?? ''"
-                :label="__('Search')"
-                :placeholder="__('Screen name, hardware ID, profile, room...')"
-                :suggestions="$searchSuggestions ?? []"
-            />
-        </form>
+        {{-- Reuse the shared filter panel pattern used by content/modules pages. --}}
+        <x-filter-panel
+            :search-value="$filters['search'] ?? ''"
+            :search-placeholder="__('Screen name, hardware ID, profile, room...')"
+            :search-suggestions="$searchSuggestions ?? []"
+            :pickers="[
+                [
+                    'label' => __('Building'),
+                    'input_name' => 'building_ids[]',
+                    'items' => $buildingsForPicker,
+                    'selected' => $selectedBuildingIds,
+                    'placeholder' => __('Building'),
+                    'no_selection_text' => __('All buildings'),
+                    'no_results_text' => __('No buildings available to add.'),
+                    'add_aria_label' => __('Add building filter'),
+                    'remove_aria_label' => __('Remove building filter'),
+                ],
+                [
+                    'label' => __('Floor'),
+                    'input_name' => 'floor_ids[]',
+                    'items' => $floorsForPicker,
+                    'selected' => $selectedFloorIds,
+                    'placeholder' => __('Floor'),
+                    'no_selection_text' => __('All floors'),
+                    'no_results_text' => __('No floors available to add.'),
+                    'add_aria_label' => __('Add floor filter'),
+                    'remove_aria_label' => __('Remove floor filter'),
+                ],
+                [
+                    'label' => __('Room'),
+                    'input_name' => 'room_ids[]',
+                    'items' => $roomsForPicker,
+                    'selected' => $selectedRoomIds,
+                    'placeholder' => __('Room'),
+                    'no_selection_text' => __('All rooms'),
+                    'no_results_text' => __('No rooms available to add.'),
+                    'add_aria_label' => __('Add room filter'),
+                    'remove_aria_label' => __('Remove room filter'),
+                ],
+            ]"
+            :reset-url="route('screens.index')"
+        />
 
         {{-- Card grid: create card + existing screen cards. --}}
         <div class="flex-1 grid grid-cols-2 lg:grid-cols-5 grid-rows-5 lg:grid-rows-3 gap-4 auto-rows-fr">

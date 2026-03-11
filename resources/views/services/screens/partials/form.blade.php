@@ -20,6 +20,30 @@
     }
     $blacklistText = old('ip_blacklist_text', collect($blacklistSource)->filter()->implode(PHP_EOL));
 
+    // Keep selected screensaver module stable across validation errors.
+    $selectedScreensaverModuleId = trim((string) old(
+        'screensaver_module_id',
+        $isEdit && isset($screen) ? (string) optional($screen->screensaverModules->first())->id : '',
+    ));
+
+    $storedRefreshInterval = $isEdit ? $screen->auto_refresh_interval : null;
+    $selectedRefreshUnit = old('auto_refresh_unit');
+    if (!in_array($selectedRefreshUnit, ['seconds', 'minutes'], true)) {
+        $selectedRefreshUnit = ($storedRefreshInterval !== null && $storedRefreshInterval % 60 === 0)
+            ? 'minutes'
+            : 'seconds';
+    }
+    $refreshInputValue = old('auto_refresh_value');
+    if ($refreshInputValue === null) {
+        if ($storedRefreshInterval === null) {
+            $refreshInputValue = '';
+        } elseif ($selectedRefreshUnit === 'minutes' && $storedRefreshInterval % 60 === 0) {
+            $refreshInputValue = (string) ($storedRefreshInterval / 60);
+        } else {
+            $refreshInputValue = (string) $storedRefreshInterval;
+        }
+    }
+
     $defaultOnlineStatus = $statuses->first(fn ($status): bool => strtolower((string) $status->name) === 'online')
         ?? $statuses->first();
     $defaultStatusId = $defaultOnlineStatus?->id ? (string) $defaultOnlineStatus->id : '';
@@ -62,7 +86,7 @@
                 @if ($isEdit)
                     <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold {{ $statusPillClasses }}">
                         <span class="inline-block h-2 w-2 rounded-full {{ $statusName === 'online' ? 'bg-emerald-500' : ($statusName === 'offline' ? 'bg-red-500' : 'bg-amber-500') }}"></span>
-                        {{ $selectedStatus?->name ? ucfirst((string) $selectedStatus->name) : __('Online') }}
+                        {{ $selectedStatus?->name ? ucfirst(__((string) $selectedStatus->name)) : __('Online') }}
                     </span>
                 @endif
             </div>
@@ -100,7 +124,7 @@
                         <x-select id="status_id" name="status_id" required>
                             @foreach ($statuses as $status)
                                 <option value="{{ $status->id }}" @selected((string) old('status_id', (string) ($screen->status_id ?? $defaultStatusId)) === (string) $status->id)>
-                                    {{ ucfirst((string) $status->name) }}
+                                    {{ ucfirst(__((string) $status->name)) }}
                                 </option>
                             @endforeach
                         </x-select>
@@ -127,17 +151,8 @@
                     <x-select id="room_id" name="room_id">
                         <option value="">{{ __('No room assigned') }}</option>
                         @foreach ($rooms as $room)
-                            @php
-                                $roomLabel = $room->name;
-                                if ($room->building?->name) {
-                                    $roomLabel = $room->building->name . ' / ' . $roomLabel;
-                                }
-                                if ($room->floor?->name) {
-                                    $roomLabel .= ' (' . __('Floor') . ' ' . $room->floor->name . ')';
-                                }
-                            @endphp
                             <option value="{{ $room->id }}" @selected((string) old('room_id', $isEdit ? $screen->room_id : '') === (string) $room->id)>
-                                {{ $roomLabel }}
+                                {{ $room->breadcrumbLabel(' > ') }}
                             </option>
                         @endforeach
                     </x-select>
@@ -150,11 +165,35 @@
                         <option value="">{{ __('No orientation') }}</option>
                         @foreach ($orientations as $orientation)
                             <option value="{{ $orientation->id }}" @selected((string) old('orientation_id', $isEdit ? $screen->orientation_id : '') === (string) $orientation->id)>
-                                {{ ucfirst((string) $orientation->name) }}
+                                {{ ucfirst(__((string) $orientation->name)) }}
                             </option>
                         @endforeach
                     </x-select>
+                    <p class="mt-1 text-xs text-slate-500">{{ __('Portrait and landscape normalize the monitor canvas direction during playback.') }}</p>
                     <x-input-error class="mt-2" :messages="$errors->get('orientation_id')" />
+                </div>
+
+                <div class="md:col-span-2 rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
+                    <x-input-label for="screensaver_module_id" :value="__('Screensaver Module')" />
+                    <x-select
+                        id="screensaver_module_id"
+                        name="screensaver_module_id"
+                        class="text-sm"
+                    >
+                        <option value="">{{ __('No screensaver module') }}</option>
+                        @foreach (($screensaverModules ?? []) as $screensaverModule)
+                            <option
+                                value="{{ $screensaverModule->id }}"
+                                @selected((string) $screensaverModule->id === $selectedScreensaverModuleId)
+                            >
+                                {{ $screensaverModule->name }}@if (!$screensaverModule->is_active) ({{ __('Inactive') }}) @endif
+                            </option>
+                        @endforeach
+                    </x-select>
+                    <p class="mt-1 text-xs text-slate-500">
+                        {{ __('Choose one screensaver module or leave it empty. Only modules from categories marked as Screensaver are listed here.') }}
+                    </p>
+                    <x-input-error class="mt-2" :messages="$errors->get('screensaver_module_id')" />
                 </div>
 
                 <div class="md:col-span-2 rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
@@ -192,17 +231,26 @@
                 </div>
 
                 <div class="rounded-xl border shadow border-[#f5f5f5] bg-[#ffffff] p-3">
-                    <x-input-label for="auto_refresh_interval" :value="__('Auto Refresh (seconds)')" />
-                    <x-text-input
-                        id="auto_refresh_interval"
-                        name="auto_refresh_interval"
-                        type="number"
-                        min="5"
-                        max="86400"
-                        class="mt-1 block w-full"
-                        :value="old('auto_refresh_interval', $isEdit ? $screen->auto_refresh_interval : '')"
-                        placeholder="{{ __('Leave empty to disable auto refresh') }}"
-                    />
+                    <x-input-label for="auto_refresh_value" :value="__('Auto Refresh')" />
+                    <div class="mt-1 grid grid-cols-[minmax(0,1fr)_10rem] gap-2">
+                        <x-text-input
+                            id="auto_refresh_value"
+                            name="auto_refresh_value"
+                            type="number"
+                            min="1"
+                            max="86400"
+                            class="block w-full"
+                            :value="$refreshInputValue"
+                            placeholder="{{ __('Leave empty to disable auto refresh') }}"
+                        />
+                        <x-select id="auto_refresh_unit" name="auto_refresh_unit" class="mt-0">
+                            <option value="seconds" @selected($selectedRefreshUnit === 'seconds')>{{ __('Seconds (s)') }}</option>
+                            <option value="minutes" @selected($selectedRefreshUnit === 'minutes')>{{ __('Minutes (min)') }}</option>
+                        </x-select>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">{{ __('User activity on the monitor restarts this refresh countdown.') }}</p>
+                    <x-input-error class="mt-2" :messages="$errors->get('auto_refresh_value')" />
+                    <x-input-error class="mt-2" :messages="$errors->get('auto_refresh_unit')" />
                     <x-input-error class="mt-2" :messages="$errors->get('auto_refresh_interval')" />
                 </div>
 

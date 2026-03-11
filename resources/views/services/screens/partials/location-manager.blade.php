@@ -146,10 +146,10 @@
             </form>
         </section>
 
-        {{-- Rooms panel allows optional building/floor assignment and inline maintenance. --}}
+        {{-- Rooms panel is bound to floors, which implicitly determines the building. --}}
         <section class="rounded-xl border border-gray-200 bg-gray-50 p-4">
             <h4 class="text-sm font-semibold text-gray-900">{{ __('Rooms') }}</h4>
-            <p class="mt-1 text-xs text-gray-500">{{ __('Rooms can be assigned to building and floor.') }}</p>
+            <p class="mt-1 text-xs text-gray-500">{{ __('Rooms belong to exactly one floor, so the building is derived automatically.') }}</p>
 
             <div class="mt-3 space-y-2 max-h-80 overflow-auto pr-1">
                 @forelse ($rooms as $room)
@@ -158,13 +158,7 @@
                         <template x-if="editRoom !== {{ $room->id }}">
                             <div class="flex items-start justify-between gap-2">
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-900">{{ $room->name }}</p>
-                                    <p class="text-xs text-gray-500">
-                                        {{ $room->building?->name ?? __('No building') }}
-                                        @if ($room->floor?->name)
-                                            • {{ __('Floor') }} {{ $room->floor->name }}
-                                        @endif
-                                    </p>
+                                    <p class="text-sm font-semibold text-gray-900">{{ $room->breadcrumbLabel(' > ') }}</p>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button type="button" class="text-xs text-blue-600 hover:underline" @click="editRoom = {{ $room->id }}">
@@ -184,19 +178,11 @@
                             <form method="POST" action="{{ route('room.update', ['room' => $room]) }}" class="space-y-2">
                                 @csrf
                                 @method('PATCH')
-                                <x-select name="building_id" id="room_building_{{ $room->id }}">
-                                    <option value="">{{ __('No building') }}</option>
-                                    @foreach ($buildings as $building)
-                                        <option value="{{ $building->id }}" @selected((int) ($room->building_id ?? 0) === (int) $building->id)>
-                                            {{ $building->name }}
-                                        </option>
-                                    @endforeach
-                                </x-select>
-                                <x-select name="floor_id" id="room_floor_{{ $room->id }}">
-                                    <option value="">{{ __('No floor') }}</option>
+                                <x-select name="floor_id" id="room_floor_{{ $room->id }}" required>
+                                    <option value="">{{ __('Select floor') }}</option>
                                     @foreach ($floors as $floor)
                                         <option value="{{ $floor->id }}" @selected((int) ($room->floor_id ?? 0) === (int) $floor->id)>
-                                            {{ $floor->building?->name ? $floor->building->name . ' / ' : '' }}{{ $floor->name }}
+                                            {{ $floor->breadcrumbLabel(' > ') }}
                                         </option>
                                     @endforeach
                                 </x-select>
@@ -217,19 +203,11 @@
             <form method="POST" action="{{ route('room.store') }}" class="mt-4 space-y-2 border-t border-gray-200 pt-4">
                 @csrf
                 <x-input-label for="new_room_name" :value="__('Add Room')" />
-                <x-select name="building_id" id="new_room_building">
-                    <option value="">{{ __('No building') }}</option>
-                    @foreach ($buildings as $building)
-                        <option value="{{ $building->id }}" @selected((string) old('building_id') === (string) $building->id)>
-                            {{ $building->name }}
-                        </option>
-                    @endforeach
-                </x-select>
-                <x-select name="floor_id" id="new_room_floor">
-                    <option value="">{{ __('No floor') }}</option>
+                <x-select name="floor_id" id="new_room_floor" required>
+                    <option value="">{{ __('Select floor') }}</option>
                     @foreach ($floors as $floor)
                         <option value="{{ $floor->id }}" @selected((string) old('floor_id') === (string) $floor->id)>
-                            {{ $floor->building?->name ? $floor->building->name . ' / ' : '' }}{{ $floor->name }}
+                            {{ $floor->breadcrumbLabel(' > ') }}
                         </option>
                     @endforeach
                 </x-select>

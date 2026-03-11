@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Building extends Model
 {
@@ -12,10 +13,11 @@ class Building extends Model
     /**
      * Rooms.
      *
-     * @return HasMany
+     * @return HasManyThrough
      */
-    public function rooms() : HasMany {
-        return $this->hasMany(Room::class);
+    public function rooms() : HasManyThrough
+    {
+        return $this->hasManyThrough(Room::class, Floor::class, 'building_id', 'floor_id');
     }
 
     /**
@@ -28,4 +30,3 @@ class Building extends Model
         return $this->hasMany(Floor::class);
     }
 }
-

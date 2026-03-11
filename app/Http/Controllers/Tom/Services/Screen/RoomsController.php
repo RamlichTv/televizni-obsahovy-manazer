@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\Tom\Services\Screen;
 
 use App\Http\Controllers\Controller;
-use App\Models\Floor;
 use App\Models\Room;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class RoomsController extends Controller
 {
@@ -26,13 +24,13 @@ class RoomsController extends Controller
 
         $rooms = Room::query()
             ->with([
-                'building:id,name',
                 'floor:id,name,building_id',
+                'floor.building:id,name',
             ])
-            ->when($buildingId !== null, fn ($query) => $query->where('building_id', $buildingId))
+            ->when($buildingId !== null, fn ($query) => $query->whereHas('floor', fn ($floorQuery) => $floorQuery->where('building_id', $buildingId)))
             ->when($floorId !== null, fn ($query) => $query->where('floor_id', $floorId))
             ->orderBy('name')
-            ->get(['id', 'name', 'building_id', 'floor_id']);
+            ->get(['id', 'name', 'floor_id']);
 
         return response()->json($rooms);
     }
@@ -48,7 +46,7 @@ class RoomsController extends Controller
         $room = Room::query()->create($this->validatePayload($request));
 
         if ($request->expectsJson()) {
-            return response()->json($room->fresh(['building', 'floor']), 201);
+            return response()->json($room->fresh(['floor', 'floor.building']), 201);
         }
 
         return redirect()
@@ -69,7 +67,7 @@ class RoomsController extends Controller
         $room->update($this->validatePayload($request));
 
         if ($request->expectsJson()) {
-            return response()->json($room->fresh(['building', 'floor']));
+            return response()->json($room->fresh(['floor', 'floor.building']));
         }
 
         return redirect()
@@ -109,38 +107,12 @@ class RoomsController extends Controller
     {
         $validated = $request->validate([
             'room_name' => ['required', 'string', 'max:255'],
-            'building_id' => ['nullable', 'integer', Rule::exists('buildings', 'id')],
-            'floor_id' => ['nullable', 'integer', Rule::exists('floors', 'id')],
+            'floor_id' => ['required', 'integer', Rule::exists('floors', 'id')],
         ]);
-
-        $buildingId = isset($validated['building_id']) ? (int) $validated['building_id'] : null;
-        $floorId = isset($validated['floor_id']) ? (int) $validated['floor_id'] : null;
-
-        if ($floorId !== null) {
-            $floor = Floor::query()
-                ->select(['id', 'building_id'])
-                ->find($floorId);
-
-            if (!$floor instanceof Floor) {
-                throw ValidationException::withMessages([
-                    'floor_id' => __('Selected floor is invalid.'),
-                ]);
-            }
-
-            if ($buildingId === null) {
-                $buildingId = (int) $floor->building_id;
-            } elseif ((int) $floor->building_id !== $buildingId) {
-                throw ValidationException::withMessages([
-                    'floor_id' => __('Selected floor does not belong to the selected building.'),
-                ]);
-            }
-        }
 
         return [
             'name' => $validated['room_name'],
-            'building_id' => $buildingId,
-            'floor_id' => $floorId,
+            'floor_id' => (int) $validated['floor_id'],
         ];
     }
 }
-
