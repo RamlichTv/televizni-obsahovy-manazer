@@ -40,6 +40,7 @@
     // Use configured pixel dimensions as the monitor canvas baseline.
     $renderWidth = (int) ($screen->width ?? 0);
     $renderHeight = (int) ($screen->height ?? 0);
+    $orientationName = strtolower((string) ($screen->orientation?->name ?? ''));
 
     if ($renderWidth <= 0 && $renderHeight <= 0) {
         $renderWidth = 1920;
@@ -53,9 +54,18 @@
     $renderWidth = max(100, min($renderWidth, 16384));
     $renderHeight = max(100, min($renderHeight, 16384));
 
+    // Normalize the playback canvas to the selected orientation.
+    if ($orientationName === 'portrait' && $renderWidth > $renderHeight) {
+        [$renderWidth, $renderHeight] = [$renderHeight, $renderWidth];
+    } elseif ($orientationName === 'landscape' && $renderHeight > $renderWidth) {
+        [$renderWidth, $renderHeight] = [$renderHeight, $renderWidth];
+    }
+
     // Non-online statuses render dedicated fallback pages instead of profile playback.
     $statusName = strtolower((string) ($screen->status?->name ?? 'online'));
     $screenMode = in_array($statusName, ['offline', 'maintenance'], true) ? $statusName : 'online';
+    $screensaverModule = collect($screen->screensaverModules ?? [])
+        ->first(fn ($module): bool => (bool) ($module->is_active ?? false));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -87,23 +97,43 @@
             })"
             x-init="init()"
             x-on:resize.window.debounce.100ms="fitCanvas()"
+            x-on:pointerdown.window="handleUserActivity()"
+            x-on:keydown.window="handleUserActivity()"
+            x-on:wheel.window.passive="handleUserActivity()"
+            x-on:touchstart.window.passive="handleUserActivity()"
         >
             @if ($screenMode === 'offline')
-                <section class="grid h-full w-full place-items-center bg-slate-900 px-8 text-center text-white">
-                    <div class="max-w-2xl">
-                        <p class="text-xs font-semibold tracking-[0.18em] text-slate-300">{{ __('SCREEN STATUS') }}</p>
-                        <h1 class="mt-3 text-5xl font-bold">{{ __('OFFLINE') }}</h1>
-                        <p class="mt-4 text-base text-slate-300">{{ __('Playback is currently disabled for this screen.') }}</p>
-                    </div>
-                </section>
+                @if ($screensaverModule)
+                    <section class="h-full w-full bg-slate-900 p-2">
+                        <article class="h-full w-full min-h-0 overflow-hidden rounded-lg bg-white shadow-sm">
+                            <x-modules.render :module="$screensaverModule" />
+                        </article>
+                    </section>
+                @else
+                    <section class="grid h-full w-full place-items-center bg-slate-900 px-8 text-center text-white">
+                        <div class="max-w-2xl">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-slate-300">{{ __('SCREEN STATUS') }}</p>
+                            <h1 class="mt-3 text-5xl font-bold">{{ __('OFFLINE') }}</h1>
+                            <p class="mt-4 text-base text-slate-300">{{ __('Playback is currently disabled for this screen.') }}</p>
+                        </div>
+                    </section>
+                @endif
             @elseif ($screenMode === 'maintenance')
-                <section class="grid h-full w-full place-items-center bg-amber-50 px-8 text-center text-amber-900">
-                    <div class="max-w-2xl">
-                        <p class="text-xs font-semibold tracking-[0.18em] text-amber-600">{{ __('SCREEN STATUS') }}</p>
-                        <h1 class="mt-3 text-5xl font-bold">{{ __('MAINTENANCE') }}</h1>
-                        <p class="mt-4 text-base text-amber-700">{{ __('This screen is temporarily unavailable while maintenance is in progress.') }}</p>
-                    </div>
-                </section>
+                @if ($screensaverModule)
+                    <section class="h-full w-full bg-amber-50 p-2">
+                        <article class="h-full w-full min-h-0 overflow-hidden rounded-lg bg-white shadow-sm">
+                            <x-modules.render :module="$screensaverModule" />
+                        </article>
+                    </section>
+                @else
+                    <section class="grid h-full w-full place-items-center bg-amber-50 px-8 text-center text-amber-900">
+                        <div class="max-w-2xl">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-amber-600">{{ __('SCREEN STATUS') }}</p>
+                            <h1 class="mt-3 text-5xl font-bold">{{ __('MAINTENANCE') }}</h1>
+                            <p class="mt-4 text-base text-amber-700">{{ __('This screen is temporarily unavailable while maintenance is in progress.') }}</p>
+                        </div>
+                    </section>
+                @endif
             @else
                 <div class="absolute inset-0 overflow-hidden bg-gray-100" x-ref="viewport">
                     <div class="absolute overflow-hidden border border-gray-300 bg-gray-100 shadow-sm" :style="canvasStyle">
@@ -379,6 +409,10 @@
                         this.refreshTimer = window.setTimeout(() => {
                             window.location.reload();
                         }, this.refreshInterval * 1000);
+                    },
+
+                    handleUserActivity() {
+                        this.scheduleRefresh();
                     },
                 };
             }
