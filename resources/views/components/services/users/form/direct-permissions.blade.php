@@ -74,9 +74,13 @@
                         @php
                             // Normalize to string because Alpine checkbox binding stores string values.
                             $permissionId = (string) $permission->id;
+                            $permissionLabel = __($permission->name);
+                            if ($permissionLabel === $permission->name) {
+                                $permissionLabel = \Illuminate\Support\Str::of($permission->name)->replace('_', ' ')->title();
+                            }
                         @endphp
                         <label class="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-white px-3 py-2 cursor-pointer transition-all duration-200 hover:border-[#5EB4EE]/60 hover:bg-[#5EB4EE]/5">
-                            <span class="text-sm text-gray-800">{{ \Illuminate\Support\Str::of($permission->name)->replace('_', ' ')->title() }}</span>
+                            <span class="text-sm text-gray-800">{{ $permissionLabel }}</span>
                             <input
                                 type="checkbox"
                                 name="permissions[]"

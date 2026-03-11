@@ -32,14 +32,29 @@ class UsersController extends Controller
         $currentUser = $request->user();
         $search = trim((string) $request->string('search'));
         $selectedRoleIds = collect((array) $request->input('role_ids', []));
+        $selectedPermissionIds = collect((array) $request->input('permission_ids', []));
 
         // Backward compatibility for legacy single-role filter query parameter.
         if ($selectedRoleIds->isEmpty() && $request->filled('role')) {
             $selectedRoleIds = collect([(string) $request->input('role')]);
         }
 
+        // Backward compatibility for legacy single-permission filter query parameter.
+        if ($selectedPermissionIds->isEmpty() && $request->filled('permission')) {
+            $selectedPermissionIds = collect([(string) $request->input('permission')]);
+        }
+
         // Normalize incoming filter values into valid positive integer role IDs.
         $selectedRoleIds = $selectedRoleIds
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn ($value) => $value > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        // Normalize incoming permission filters to valid positive integer IDs.
+        $selectedPermissionIds = $selectedPermissionIds
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->map(fn ($value) => (int) $value)
             ->filter(fn ($value) => $value > 0)
@@ -52,6 +67,11 @@ class UsersController extends Controller
             ->when(!$currentUser->isAdmin(), fn ($query) => $query->where('name', '!=', 'Administrator'))
             ->orderBy('name')
             ->get(['id', 'name', 'is_hidden', 'color']);
+
+        // Direct-permission filter options.
+        $permissions = Permission::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         // Keep index payload eager loaded to avoid N+1 when rendering role/permission chips.
         $users = User::query()
@@ -69,6 +89,11 @@ class UsersController extends Controller
                     $roleQuery->whereIn('roles.id', $selectedRoleIds);
                 });
             })
+            ->when($selectedPermissionIds !== [], function ($query) use ($selectedPermissionIds) {
+                $query->whereHas('permissions', function ($permissionQuery) use ($selectedPermissionIds) {
+                    $permissionQuery->whereIn('permissions.id', $selectedPermissionIds);
+                });
+            })
             ->orderBy('username')
             ->paginate(15)
             ->withQueryString();
@@ -76,9 +101,11 @@ class UsersController extends Controller
         return view('services.users.index', [
             'users' => $users,
             'roles' => $roles,
+            'permissions' => $permissions,
             'filters' => [
                 'search' => $search,
                 'role_ids' => $selectedRoleIds,
+                'permission_ids' => $selectedPermissionIds,
             ],
             // Suggestions are deduplicated across name/username/email for the search datalist.
             'searchSuggestions' => User::query()

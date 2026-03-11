@@ -19,10 +19,22 @@
                 ->unique()
                 ->values();
 
+            // Normalize selected direct-permission filters to stable string IDs.
+            $selectedPermissionIds = collect((array) ($filters['permission_ids'] ?? []))
+                ->map(fn ($id) => (string) $id)
+                ->filter()
+                ->unique()
+                ->values();
+
             // Keep picker payload minimal and serializable for the shared filter panel component.
             $rolesForPicker = $roles->map(fn ($role) => [
                 'id' => (string) $role->id,
                 'name' => (string) $role->name,
+            ])->values();
+
+            $permissionsForPicker = $permissions->map(fn ($permission) => [
+                'id' => (string) $permission->id,
+                'name' => (string) \Illuminate\Support\Str::of($permission->name)->replace('_', ' ')->title(),
             ])->values();
         @endphp
 
@@ -57,6 +69,17 @@
                         'no_results_text' => __('No roles available to add.'),
                         'add_aria_label' => __('Add role filter'),
                         'remove_aria_label' => __('Remove role filter'),
+                    ],
+                    [
+                        'label' => __('Direct Permissions'),
+                        'input_name' => 'permission_ids[]',
+                        'items' => $permissionsForPicker,
+                        'selected' => $selectedPermissionIds,
+                        'placeholder' => __('Permission'),
+                        'no_selection_text' => __('All direct permissions'),
+                        'no_results_text' => __('No permissions available to add.'),
+                        'add_aria_label' => __('Add permission filter'),
+                        'remove_aria_label' => __('Remove permission filter'),
                     ],
                 ]"
                 :reset-url="route('users.index')"
