@@ -56,6 +56,7 @@
                 'columnSpanExceeded' => __('Column span exceeds page bounds.'),
                 'pageUpdated' => __('Page updated.'),
                 'requestFailed' => __('Request failed.'),
+                'uncategorized' => __('Uncategorized'),
             ]),
         })"
         x-init="init()"

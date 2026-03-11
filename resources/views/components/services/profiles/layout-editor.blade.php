@@ -6,38 +6,75 @@
 
 <div x-ref="editorViewport" class="profile-editor-shell overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
     <div class="profile-editor-stage flex min-h-[76vh] flex-col lg:flex-row">
-        
-        {{-- Left rail: page list and draggable module catalog. --}}
-        <aside class="w-full shrink-0 border-b border-gray-200 bg-slate-50/70 p-4 lg:w-80 lg:border-b-0 lg:border-r">
-            <div class="flex items-center justify-between">
-                <h2 class="text-sm font-semibold text-gray-900">{{ __('Pages') }}</h2>
+        {{-- Collapsible left rail: page tabs plus grouped draggable module catalog. --}}
+        <aside
+            x-show="sidebarOpen"
+            x-cloak
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-x-3"
+            x-transition:enter-end="opacity-100 translate-x-0"
+            x-transition:leave="ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-x-0"
+            x-transition:leave-end="opacity-0 -translate-x-3"
+            class="flex w-full shrink-0 flex-col border-b border-gray-200 bg-slate-50/70 p-4 lg:w-80 lg:border-b-0 lg:border-r"
+        >
+            {{-- Rail header exposes the visibility toggle and explains what lives in the sidebar. --}}
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-900">{{ __('Workspace') }}</h2>
+                    <p class="text-[11px] text-gray-500">{{ __('Pages and module library.') }}</p>
+                </div>
                 <button
                     type="button"
                     class="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                    @click="addPage()"
-                    title="{{ __('Add page') }}"
+                    @click="toggleSidebar()"
+                    x-bind:aria-expanded="sidebarOpen.toString()"
+                    title="{{ __('Hide sidebar') }}"
                 >
-                    <x-icon name="plus-circle" class="h-4 w-4" />
-                    {{ __('Add') }}
+                    {{ __('Hide') }}
                 </button>
             </div>
 
-            <div class="mt-3 space-y-2 max-h-56 overflow-auto pr-1">
-                <template x-for="(page, index) in pages" :key="'page-tab-' + page.id">
+            {{-- Page tabs remain at the top of the rail for quick carousel navigation. --}}
+            <div class="mt-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-900">{{ __('Pages') }}</h2>
                     <button
                         type="button"
-                        @click="setActivePage(index)"
-                        :class="activePageIndex === index ? 'border-[#077CB6] bg-[#077CB6] text-white' : 'border-gray-300 bg-white text-gray-700'"
-                        class="w-full rounded-md border px-3 py-2 text-left text-xs font-semibold transition"
+                        class="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                        @click="addPage()"
+                        title="{{ __('Add page') }}"
                     >
-                        <span x-text="page.name"></span>
-                        <span class="ml-2 text-[10px] opacity-80" x-text="'(' + page.row_count + 'x' + page.column_count + ')'"></span>
+                        <x-icon name="plus-circle" class="h-4 w-4" />
+                        {{ __('Add') }}
                     </button>
-                </template>
+                </div>
+
+                <div class="mt-3 space-y-2 max-h-56 overflow-auto pr-1">
+                    <template x-for="(page, index) in pages" :key="'page-tab-' + page.id">
+                        <button
+                            type="button"
+                            @click="setActivePage(index)"
+                            :class="activePageIndex === index ? 'border-[#077CB6] bg-[#077CB6] text-white' : 'border-gray-300 bg-white text-gray-700'"
+                            class="w-full rounded-md border px-3 py-2 text-left text-xs font-semibold transition"
+                        >
+                            <span x-text="page.name"></span>
+                            <span class="ml-2 text-[10px] opacity-80" x-text="'(' + page.row_count + 'x' + page.column_count + ')'"></span>
+                        </button>
+                    </template>
+                </div>
             </div>
 
-            <div class="mt-5">
-                <h2 class="text-sm font-semibold text-gray-900">{{ __('Modules') }}</h2>
+            {{-- Module catalog stays searchable, but results are grouped into category dropdowns. --}}
+            <div class="mt-5 flex min-h-0 flex-1 flex-col">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900">{{ __('Modules') }}</h2>
+                        <p class="text-[11px] text-gray-500">{{ __('Grouped by category for drag and drop.') }}</p>
+                    </div>
+                    <span class="rounded bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600" x-text="'{{ __('Total') }}: ' + filteredModules().length"></span>
+                </div>
+
                 <div class="mt-2">
                     <x-text-input
                         type="text"
@@ -47,19 +84,50 @@
                     />
                 </div>
 
-                <div class="mt-3 max-h-[48vh] space-y-2 overflow-auto pr-1">
-                    <template x-for="module in filteredModules()" :key="'module-' + module.id">
-                        <article
-                            draggable="true"
-                            @dragstart="startModuleDrag(module, $event)"
-                            class="cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-[#5EB4EE]"
-                        >
-                            <h3 class="text-sm font-semibold text-gray-900" x-text="module.name"></h3>
-                            <p class="mt-1 text-[11px] text-gray-500" x-text="module.category || '{{ __('Uncategorized') }}'"></p>
-                        </article>
+                <div class="mt-3 flex-1 min-h-0 space-y-2 overflow-auto pr-1">
+                    <template x-for="group in groupedFilteredModules()" :key="'module-group-' + group.key">
+                        <section class="rounded-lg border border-gray-200 bg-gray-50 transition-all duration-200 hover:border-[#5EB4EE]/40">
+                            <button
+                                type="button"
+                                class="flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition-colors duration-200 hover:text-[#077CB6]"
+                                @click="toggleModuleCategory(group.key)"
+                                x-bind:aria-expanded="isModuleCategoryOpen(group.key).toString()"
+                            >
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-semibold text-gray-800" x-text="group.label"></span>
+                                    <span class="block text-[11px] text-gray-500">{{ __('Module Category') }}</span>
+                                </span>
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="rounded-full border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-600" x-text="group.modules.length"></span>
+                                    <x-icon name="arr" class="h-4 w-4 text-gray-500 transition-transform" x-bind:class="isModuleCategoryOpen(group.key) ? 'rotate-180' : ''" />
+                                </span>
+                            </button>
+
+                            <div
+                                x-show="isModuleCategoryOpen(group.key)"
+                                x-transition:enter="ease-out duration-200"
+                                x-transition:enter-start="opacity-0 -translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="ease-in duration-150"
+                                x-transition:leave-start="opacity-100 translate-y-0"
+                                x-transition:leave-end="opacity-0 -translate-y-1"
+                                class="space-y-2 px-3 pb-3"
+                            >
+                                <template x-for="module in group.modules" :key="'module-' + group.key + '-' + module.id">
+                                    <article
+                                        draggable="true"
+                                        @dragstart="startModuleDrag(module, $event)"
+                                        class="cursor-grab rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-[#5EB4EE]"
+                                    >
+                                        <h3 class="text-sm font-semibold text-gray-900" x-text="module.name"></h3>
+                                        <p class="mt-1 text-[11px] text-gray-500">{{ __('Drag into layout') }}</p>
+                                    </article>
+                                </template>
+                            </div>
+                        </section>
                     </template>
 
-                    <p x-show="filteredModules().length === 0" class="text-xs text-gray-500" x-cloak>
+                    <p x-show="groupedFilteredModules().length === 0" class="text-xs text-gray-500" x-cloak>
                         {{ __('No modules match your search.') }}
                     </p>
                 </div>
@@ -67,7 +135,20 @@
         </aside>
 
         {{-- Main workspace: active page toolbar + interactive grid canvas. --}}
-        <div class="flex flex-1 flex-col">
+        <div class="relative flex flex-1 flex-col">
+            {{-- Floating reopen control keeps the module rail accessible after it is hidden. --}}
+            <button
+                type="button"
+                class="absolute left-3 top-3 z-40 inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white/95 px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm backdrop-blur hover:bg-white"
+                x-show="!sidebarOpen"
+                x-cloak
+                @click="toggleSidebar()"
+                x-bind:aria-expanded="sidebarOpen.toString()"
+                title="{{ __('Show sidebar') }}"
+            >
+                {{ __('Show Sidebar') }}
+            </button>
+
             <template x-if="activePage()">
                 <div class="flex h-full flex-col" :class="pageMotionClass">
                     <div class="border-b border-gray-200 p-3">
@@ -162,7 +243,10 @@
                             <span class="rounded bg-gray-100 px-2 py-0.5" x-text="'{{ __('Rows') }}: ' + activePage().row_count"></span>
                             <span class="rounded bg-gray-100 px-2 py-0.5" x-text="'{{ __('Columns') }}: ' + activePage().column_count"></span>
                             <span class="rounded bg-gray-100 px-2 py-0.5" x-text="'{{ __('Modules') }}: ' + activePage().placements.length"></span>
-                            <span class="rounded bg-gray-100 px-2 py-0.5">{{ __('Drag modules from left sidebar into the canvas.') }}</span>
+                            <span
+                                class="rounded bg-gray-100 px-2 py-0.5"
+                                x-text="sidebarOpen ? '{{ __('Drag modules from the sidebar into the canvas.') }}' : '{{ __('Open the sidebar to drag modules into the canvas.') }}'"
+                            ></span>
                         </div>
                     </div>
 

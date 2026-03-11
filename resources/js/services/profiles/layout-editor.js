@@ -36,6 +36,7 @@ export function profileLayoutEditor(config = {}) {
         columnSpanExceeded: 'Column span exceeds page bounds.',
         pageUpdated: 'Page updated.',
         requestFailed: 'Request failed.',
+        uncategorized: 'Uncategorized',
         ...(config.i18n ?? {}),
     };
 
@@ -49,7 +50,9 @@ export function profileLayoutEditor(config = {}) {
         pageMotionClass: '',
         motionTimer: null,
         isFullscreen: false,
+        sidebarOpen: true,
         moduleSearch: '',
+        moduleCategoryOpen: {},
         selectedPlacementId: null,
         dragPayload: null,
         isSaving: false,
@@ -64,6 +67,8 @@ export function profileLayoutEditor(config = {}) {
         // Initialize runtime-only handlers and normalize incoming payload shape.
         init() {
             this.pages = this.pages.map((page) => this.normalizePage(page));
+            this.modules = this.normalizeModules(this.modules);
+            this.initializeModuleCategoryState();
             if (this.pages.length === 0) {
                 this.pages.push(this.normalizePage({
                     id: Date.now(),
@@ -127,6 +132,15 @@ export function profileLayoutEditor(config = {}) {
             }));
         },
 
+        // Normalize the draggable module catalog for consistent grouping and search.
+        normalizeModules(modules) {
+            return modules.map((module) => ({
+                id: String(module.id ?? ''),
+                name: String(module.name ?? 'Module'),
+                category: String(module.category ?? '').trim(),
+            }));
+        },
+
         // Rebalance row/column sizes so they always sum to 100%.
         normalizeTrackSizes(sizes, count) {
             if (count <= 0) {
@@ -149,6 +163,34 @@ export function profileLayoutEditor(config = {}) {
             return clean.map((value) => Number(((value / total) * 100).toFixed(4)));
         },
 
+        // Seed open/closed dropdown state for every category represented in the module catalog.
+        initializeModuleCategoryState() {
+            const nextState = { ...this.moduleCategoryOpen };
+
+            this.modules.forEach((module) => {
+                const categoryKey = this.moduleCategoryKey(module);
+                if (typeof nextState[categoryKey] === 'undefined') {
+                    nextState[categoryKey] = true;
+                }
+            });
+
+            this.moduleCategoryOpen = nextState;
+        },
+
+        // Resolve a stable internal key for one module category.
+        moduleCategoryKey(module) {
+            const category = String(module.category ?? '').trim().toLowerCase();
+
+            return category === '' ? '__uncategorized__' : category;
+        },
+
+        // Resolve the user-facing label for one module category.
+        moduleCategoryLabel(module) {
+            const category = String(module.category ?? '').trim();
+
+            return category === '' ? i18n.uncategorized : category;
+        },
+
         // Perform live search in module sidebar by name and category.
         filteredModules() {
             const search = this.moduleSearch.trim().toLowerCase();
@@ -162,6 +204,62 @@ export function profileLayoutEditor(config = {}) {
 
                 return name.includes(search) || category.includes(search);
             });
+        },
+
+        // Group current search results into per-category dropdown sections.
+        groupedFilteredModules() {
+            const groups = new Map();
+
+            this.filteredModules().forEach((module) => {
+                const key = this.moduleCategoryKey(module);
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        key,
+                        label: this.moduleCategoryLabel(module),
+                        modules: [],
+                    });
+                }
+
+                groups.get(key).modules.push(module);
+            });
+
+            return Array.from(groups.values())
+                .sort((left, right) => {
+                    if (left.key === '__uncategorized__') {
+                        return 1;
+                    }
+                    if (right.key === '__uncategorized__') {
+                        return -1;
+                    }
+
+                    return left.label.localeCompare(right.label);
+                })
+                .map((group) => ({
+                    ...group,
+                    modules: [...group.modules].sort((left, right) => left.name.localeCompare(right.name)),
+                }));
+        },
+
+        // Toggle visibility of the left rail that contains page tabs and the module library.
+        toggleSidebar() {
+            this.sidebarOpen = !this.sidebarOpen;
+        },
+
+        // Expand or collapse one module category group.
+        toggleModuleCategory(categoryKey) {
+            this.moduleCategoryOpen = {
+                ...this.moduleCategoryOpen,
+                [categoryKey]: !this.isModuleCategoryOpen(categoryKey),
+            };
+        },
+
+        // Automatically reveal matching groups while the user is searching.
+        isModuleCategoryOpen(categoryKey) {
+            if (this.moduleSearch.trim() !== '') {
+                return true;
+            }
+
+            return Boolean(this.moduleCategoryOpen[categoryKey]);
         },
 
         // Switch active page and trigger directional transition class.

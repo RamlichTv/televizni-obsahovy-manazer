@@ -304,7 +304,12 @@ class ProfilesController extends Controller
 
         $profileName = $profile->name;
         $profileId = $profile->id;
-        $profile->delete();
+        DB::transaction(function () use ($profile): void {
+            // Profile uses soft deletes, so DB cascades do not execute from profile->delete().
+            // Remove concrete page rows first so page_modules/page_rows/page_columns cascade correctly.
+            Page::query()->where('profile_id', $profile->id)->delete();
+            $profile->delete();
+        });
 
         $this->logEvent(
             typeName: 'profile_deleted',
