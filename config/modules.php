@@ -166,6 +166,7 @@ return [
         'whitelist' => [
             'https://www.youtube.com/embed/',
             'https://player.vimeo.com/',
+            'https://giphy.com/embed/',
         ],
         'blacklist' => [],
     ],
