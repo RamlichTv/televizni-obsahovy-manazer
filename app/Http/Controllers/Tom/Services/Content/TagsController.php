@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Content tag manager controller.
+ *
+ * The feedback refresh keeps tag CRUD redirects pointed back at the tag manager
+ * so the shared modal shell can reopen with the correct context intact.
+ */
+
 namespace App\Http\Controllers\Tom\Services\Content;
 
 use App\Http\Controllers\Controller;
@@ -17,12 +24,12 @@ class TagsController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:50', 'unique:tags,name'],
+        $validated = $request->validateWithBag('tagManager', [
+            'name' => ['required', 'string', 'alpha:utf-8', 'max:20', 'unique:tags,name'],
         ]);
 
         $tag = Tag::create([
-            'name' => $validated['name']
+            'name' => strtolower($validated['name'])
         ]);
 
         $this->logEvent(
@@ -36,7 +43,9 @@ class TagsController extends Controller
             userId: $request->user()?->id,
         );
 
-        return back()->with('success', __('Tag created successfully.'));
+        return back()
+            ->with('openContentManager', 'tags')
+            ->with('success', __('Tag created successfully.'));
     }
 
     /**
@@ -64,6 +73,8 @@ class TagsController extends Controller
             userId: request()->user()?->id,
         );
 
-        return back()->with('success', __('Tag deleted successfully.'));
+        return back()
+            ->with('openContentManager', 'tags')
+            ->with('success', __('Tag deleted successfully.'));
     }
 }

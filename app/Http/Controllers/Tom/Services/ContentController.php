@@ -30,7 +30,7 @@ class ContentController extends Controller
      * @param Request $request
      * @return View
      */
-    public function manage(Request $request) : View {
+    public function manage(string $username,Request $request) : View {
         $content_objects = ContentObject::where('author_id', $request->user()->id);
         
         $this->applyFilters($content_objects);

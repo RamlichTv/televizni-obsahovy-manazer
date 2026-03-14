@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Content type manager controller.
+ *
+ * The shared feedback system relies on this controller to preserve modal reopen
+ * state and inline editor context across both successful redirects and validation errors.
+ */
+
 namespace App\Http\Controllers\Tom\Services\Content;
 
 use App\Http\Controllers\Controller;
@@ -18,7 +25,7 @@ class ContentTypeController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $request->validateWithBag('contentTypeManager', [
             'name' => ['required', 'string', 'max:50', 'unique:content_types,name'],
             'is_file' => ['sometimes', 'boolean'],
             'multiple_file' => ['sometimes', 'boolean'],
@@ -40,7 +47,9 @@ class ContentTypeController extends Controller
             userId: $request->user()?->id,
         );
 
-        return back()->with('success', __('Content type created successfully.'));
+        return back()
+            ->with('openContentManager', 'types')
+            ->with('success', __('Content type created successfully.'));
     }
 
     /**
@@ -60,7 +69,7 @@ class ContentTypeController extends Controller
             'max_size' => $type->max_size,
         ];
 
-        $request->validate([
+        $request->validateWithBag('contentTypeManager', [
             'name' => ['required', 'string', 'max:50', Rule::unique('content_types')->ignore($type->id)],
             'is_file' => ['sometimes', 'boolean'],
             'multiple_file' => ['sometimes', 'boolean'],
@@ -92,7 +101,9 @@ class ContentTypeController extends Controller
             userId: $request->user()?->id,
         );
 
-        return back()->with('success', __('Content type updated successfully.'));
+        return back()
+            ->with('openContentManager', 'types')
+            ->with('success', __('Content type updated successfully.'));
     }
 
     /**
@@ -115,7 +126,9 @@ class ContentTypeController extends Controller
                 userId: request()->user()?->id,
             );
 
-            return back()->with('error', __('Cannot delete type because it is used by existing content.'));
+            return back()
+                ->with('openContentManager', 'types')
+                ->with('error', __('Cannot delete type because it is used by existing content.'));
         }
 
         $typeName = $type->name;
@@ -132,7 +145,9 @@ class ContentTypeController extends Controller
             userId: request()->user()?->id,
         );
 
-        return back()->with('success', __('Content type deleted successfully.'));
+        return back()
+            ->with('openContentManager', 'types')
+            ->with('success', __('Content type deleted successfully.'));
     }
 
     /**
@@ -172,4 +187,3 @@ class ContentTypeController extends Controller
         ];
     }
 }
-

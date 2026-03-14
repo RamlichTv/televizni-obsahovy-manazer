@@ -1,11 +1,23 @@
+{{--
+    Content services landing page.
+    It mounts the shared light-mode modal shell for both tag and content-type management flows.
+--}}
+
 <x-app-layout title="{{ __('Content') }}">
-    
-    {{--
-        We use x-data directly in the header slot.
-        The modals are technically inside the header, but visually cover the whole page.
-    --}}
+    @php
+        /**
+         * Reopen the correct manager after redirects or validation failures.
+         */
+        $openContentManager = session('openContentManager');
+        $tagManagerErrors = $errors->getBag('tagManager');
+        $contentTypeManagerErrors = $errors->getBag('contentTypeManager');
+        $tagManagerShouldOpen = $tagManagerErrors->isNotEmpty() || old('return_modal') === 'tags' || $openContentManager === 'tags';
+        $typeManagerShouldOpen = $contentTypeManagerErrors->isNotEmpty() || old('return_modal') === 'types' || $openContentManager === 'types';
+    @endphp
+
+    {{-- Header actions stay close to the page title while reusable modal shells live in the shared component. --}}
     <x-slot name="header">
-        <div x-data="{ tagModalOpen: false, typeModalOpen: false }" class="w-full">
+        <div class="w-full">
             <div class="flex items-start justify-between gap-4">
                 <x-services.page-header
                     title="{{ __('Content Services') }}"
@@ -14,14 +26,14 @@
 
                 <div class="flex items-center gap-2 whitespace-nowrap">
                     @can('manage_tags')
-                        <x-secondary-button @click="tagModalOpen = true">
+                        <x-secondary-button type="button" @click="$dispatch('open-modal', { name: 'tag-manager' })">
                             <x-icon name="hashtag" class="w-4 h-4 mr-2"/>
                             {{ __('Tags') }}
                         </x-secondary-button>
                     @endcan
 
                     @can('manage_content_types')
-                        <x-secondary-button @click="typeModalOpen = true">
+                        <x-secondary-button type="button" @click="$dispatch('open-modal', { name: 'content-type-manager' })">
                             <x-icon name="min-cog" class="w-4 h-4 mr-2"/>
                             {{ __('Types') }}
                         </x-secondary-button>
@@ -29,128 +41,74 @@
                 </div>
             </div>
 
-            {{-- ======================== --}}
-            {{-- MODAL: TAG MANAGER       --}}
-            {{-- ======================== --}}
+            {{-- Tag manager dialog reuses the shared light modal shell and reopens when the session requests it. --}}
             @can('manage_tags')
-                <div
-                    x-show="tagModalOpen"
-                    style="display: none;"
-                    class="fixed inset-0 z-50 overflow-y-auto"
-                    aria-labelledby="modal-title"
-                    role="dialog"
-                    aria-modal="true"
-                >
-                    <div
-                        x-show="tagModalOpen"
-                        x-transition:enter="ease-out duration-300"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-75"
-                        x-transition:leave="ease-in duration-200"
-                        x-transition:leave-start="opacity-75"
-                        x-transition:leave-end="opacity-0"
-                        class="fixed inset-0 bg-gray-500 opacity-75 transition-opacity"
-                        @click="tagModalOpen = false"
-                    >
-                    </div>
-
-                    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                        <div
-                            x-show="tagModalOpen"
-                            x-transition:enter="ease-out duration-300"
-                            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            x-transition:enter-end="opacity-75 translate-y-0 sm:scale-100"
-                            x-transition:leave="ease-in duration-200"
-                            x-transition:leave-start="opacity-75 translate-y-0 sm:scale-100"
-                            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-xl"
-                        >
-                            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
-                                <div class="sm:flex sm:items-start justify-between">
-                                    <h3 class="text-lg font-semibold leading-6 text-gray-900" id="modal-title">
-                                        {{ __('Manage Tags') }}
-                                    </h3>
-                                    <button @click="tagModalOpen = false" class="text-gray-400 hover:text-gray-500">
-                                        <span class="sr-only">{{ __('Close') }}</span>
-                                        <x-icon name="x" class="w-6 h-6" />
-                                    </button>
+                <x-modal name="tag-manager" :show="$tagManagerShouldOpen" maxWidth="4xl">
+                    <div class="flex max-h-[min(80vh,720px)] min-h-[24rem] flex-col bg-white">
+                        <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ __('Manage Tags') }}</h3>
+                                    <p class="mt-1 text-sm text-gray-500">{{ __('Create, search, and remove reusable content tags without leaving the content landing page.') }}</p>
                                 </div>
-                            </div>
 
-                            <div class="px-4 py-4 sm:p-6">
-                                @include('services.content.partials.tag-manager')
+                                <button
+                                    type="button"
+                                    class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
+                                    @click="$dispatch('close-modal', { name: 'tag-manager' })"
+                                >
+                                    <span class="sr-only">{{ __('Close') }}</span>
+                                    <x-icon name="x" class="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
+
+                        <div class="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-6">
+                            @include('services.content.partials.tag-manager')
+                        </div>
                     </div>
-                </div>
+                </x-modal>
             @endcan
 
-            {{-- ======================== --}}
-            {{-- MODAL: TYPE MANAGER      --}}
-            {{-- ======================== --}}
+            {{-- Content-type manager uses the same shared shell with a wider layout for the type table. --}}
             @can('manage_content_types')
-                <div
-                    x-show="typeModalOpen"
-                    style="display: none;"
-                    class="fixed inset-0 z-50 overflow-y-auto"
-                    aria-labelledby="modal-title"
-                    role="dialog"
-                    aria-modal="true"
-                >
-                    <div
-                        x-show="typeModalOpen"
-                        x-transition:enter="ease-out duration-300"
-                        x-transition:enter-start="opacity-0"
-                        x-transition:enter-end="opacity-75"
-                        x-transition:leave="ease-in duration-200"
-                        x-transition:leave-start="opacity-75"
-                        x-transition:leave-end="opacity-0"
-                        class="fixed inset-0 bg-gray-500 opacity-75 transition-opacity"
-                        @click="typeModalOpen = false"
-                    ></div>
-
-                    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                        <div
-                            x-show="typeModalOpen"
-                            x-transition:enter="ease-out duration-300"
-                            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            x-transition:enter-end="opacity-75 translate-y-0 sm:scale-100"
-                            x-transition:leave="ease-in duration-200"
-                            x-transition:leave-start="opacity-75 translate-y-0 sm:scale-100"
-                            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8"
-                        >
-                            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
-                                <div class="sm:flex sm:items-start justify-between">
-                                    <h3 class="text-lg font-semibold leading-6 text-gray-900">
-                                        {{ __('Manage Content Types') }}
-                                    </h3>
-                                    <button @click="typeModalOpen = false" class="text-gray-400 hover:text-gray-500">
-                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+                <x-modal name="content-type-manager" :show="$typeManagerShouldOpen" maxWidth="6xl">
+                    <div class="flex max-h-[min(84vh,860px)] min-h-[28rem] flex-col bg-white">
+                        <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ __('Manage Content Types') }}</h3>
+                                    <p class="mt-1 text-sm text-gray-500">{{ __('Maintain file rules and reusable type definitions in the same light modal system used across the app.') }}</p>
                                 </div>
-                            </div>
 
-                            <div class="px-4 py-4 sm:p-6">
-                                @include('services.content.partials.content-type-manager')
+                                <button
+                                    type="button"
+                                    class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
+                                    @click="$dispatch('close-modal', { name: 'content-type-manager' })"
+                                >
+                                    <span class="sr-only">{{ __('Close') }}</span>
+                                    <x-icon name="x" class="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
+
+                        <div class="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-6">
+                            @include('services.content.partials.content-type-manager')
+                        </div>
                     </div>
-                </div>
+                </x-modal>
             @endcan
         </div>
     </x-slot>
-    
+
     {{-- Service entry cards for content workflows. --}}
     <section class="grow grid grid-cols-2 grid-rows-2 lg:grid-cols-5 lg:grid-rows-3 gap-4 p-4 mx-auto w-full">
         @if(Auth::user()->content_objects->count() > 0)
             <x-service-card
-                title="{{ __('Manage Content') }}"
-                description="{{ __('View and manage existing content.') }}"
+                title="{{ __('Manage My Content') }}"
+                description="{{ __('View and manage content created by me.') }}"
                 icon="folder"
-                link="{{ route('content.manage') }}"
+                link="{{ route('content.my', Auth::user()->username) }}"
             />
         @endif
 
