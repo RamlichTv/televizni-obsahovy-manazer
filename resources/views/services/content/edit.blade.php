@@ -4,11 +4,12 @@
     </x-slot>
 
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="javascript:history.back()" class="text-gray-500 hover:text-gray-700 transition">
-                    <x-icon class="size-6 rotate-180" name="arrow"/>
-                </a>
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full">
+            <div class="flex items-center gap-3">
+                <x-secondary-link href="{{ route('content.show', $content) }}">
+                    <x-icon name="arrow" class="w-4 h-4 mr-2 rotate-180" />
+                    {{ __('Back to Content') }}
+                </x-secondary-link>
                 <h1 class="text-2xl font-bold text-gray-800">
                     {{ __('Editing: ' . $content->name) }}
                 </h1>

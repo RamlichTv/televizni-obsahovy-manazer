@@ -16,9 +16,10 @@
     <x-slot name="header">
         <div class="flex md:flex-row md:items-center justify-between w-full gap-4">
             <div class="flex items-center gap-4">
-                <a href="{{ route('content.index') }}" class="text-gray-500 hover:text-gray-700 transition">
-                    <x-icon class="size-6 rotate-180" name="arrow"/>
-                </a>
+                <x-secondary-link href="{{ route('content.index') }}">
+                    <x-icon name="arrow" class="w-4 h-4 mr-2 rotate-180" />
+                    {{ __('Back to Content') }}
+                </x-secondary-link>
                 <h1 class="text-2xl font-bold text-gray-800">
                     {{ __('Content List') }}
                 </h1>

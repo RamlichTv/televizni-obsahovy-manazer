@@ -3,29 +3,56 @@
         {{ __('Showing content') }}
     </x-slot>
 
+    @php
+        $showBackRoute = route('content.library');
+        $showBackLabel = __('Back to Library');
+
+        if ($content->deleted_at && auth()->user()?->isAdmin()) {
+            $showBackRoute = route('content.deleted');
+            $showBackLabel = __('Back to Deleted');
+        } elseif ($content->status_id === 3) {
+            $showBackRoute = route('content.archived');
+            $showBackLabel = __('Back to Archived');
+        } elseif ($content->status_id === 1) {
+            if ((int) $content->author_id === (int) auth()->id() && filled(auth()->user()?->username)) {
+                $showBackRoute = route('content.my', auth()->user()->username);
+                $showBackLabel = __('Back to My Content');
+            } elseif (auth()->user()?->can('publish_content')) {
+                $showBackRoute = route('content.unpublished');
+                $showBackLabel = __('Back to Unpublished');
+            } else {
+                $showBackRoute = route('content.index');
+                $showBackLabel = __('Back to Content');
+            }
+        }
+    @endphp
+
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="javascript:history.back()" class="text-gray-500 hover:text-gray-700 transition">
-                    <x-icon class="size-6 rotate-180" name="arrow"/>
-                </a>
-                <h1 class="text-2xl font-bold text-gray-800 truncate max-w-xl">
-                    {{ __('Showing: ') . $content->name }}
-                </h1>
-                
-                {{-- Status Badge --}}
-                @php
-                    $status = App\Models\ContentStatus::find($content->status_id)->name;
-                @endphp
-                @if($content->status_id == 1)
-                    <span class="bg-yellow-100 text-yellow-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
-                @elseif($content->status_id == 2)
-                    <span class="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
-                @elseif($content->status_id == 3)
-                    <span class="bg-gray-100 text-gray-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
-                @elseif($content->status_id == 4)
-                    <span class="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
-                @endif
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full">
+            <div class="flex items-center gap-3">
+                <x-secondary-link href="{{ $showBackRoute }}">
+                    <x-icon name="arrow" class="w-4 h-4 mr-2 rotate-180" />
+                    {{ $showBackLabel }}
+                </x-secondary-link>
+                <div class="flex min-w-0 items-center gap-3">
+                    <h1 class="text-2xl font-bold text-gray-800 truncate max-w-xl">
+                        {{ __('Showing: ') . $content->name }}
+                    </h1>
+
+                    {{-- Status Badge --}}
+                    @php
+                        $status = App\Models\ContentStatus::find($content->status_id)->name;
+                    @endphp
+                    @if($content->status_id == 1)
+                        <span class="bg-yellow-100 text-yellow-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
+                    @elseif($content->status_id == 2)
+                        <span class="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
+                    @elseif($content->status_id == 3)
+                        <span class="bg-gray-100 text-gray-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
+                    @elseif($content->status_id == 4)
+                        <span class="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">{{ $status }}</span>
+                    @endif
+                </div>
             </div>
         </div>
     </x-slot>
