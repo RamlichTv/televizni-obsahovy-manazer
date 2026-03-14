@@ -11,13 +11,6 @@
 
 <section class="py-8 px-4">
     <div class="max-w-7xl mx-auto space-y-4">
-        {{-- Backend status and error banners for create/delete operations. --}}
-        @if (session('success'))
-            <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
         @if ($errors->has('profile') || $errors->has('page'))
             <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {{ $errors->first('profile') ?: $errors->first('page') }}
@@ -83,7 +76,15 @@
                                         @endcan
 
                                         @can('delete', $profile)
-                                            <form method="POST" action="{{ route('profile.destroy', ['profile' => $profile]) }}" onsubmit="return confirm('{{ __('Delete this profile?') }}');">
+                                            <form
+                                                method="POST"
+                                                action="{{ route('profile.destroy', ['profile' => $profile]) }}"
+                                                data-confirm-title="{{ __('Delete profile') }}"
+                                                data-confirm-message="{{ __('Delete the profile :name?', ['name' => $profile->name]) }}"
+                                                data-confirm-label="{{ __('Delete') }}"
+                                                data-cancel-label="{{ __('Cancel') }}"
+                                                data-confirm-variant="danger"
+                                            >
                                                 @csrf
                                                 @method('DELETE')
                                                 <x-danger-button>{{ __('Delete') }}</x-danger-button>

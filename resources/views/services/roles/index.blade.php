@@ -1,3 +1,8 @@
+{{--
+    Roles service index page.
+    It now relies on the shared toast host for generic success messages while keeping role-specific errors inline.
+--}}
+
 <x-app-layout title="{{ __('Roles') }}">
     {{-- Roles Sub-Navigation Label --}}
     <x-slot name="rolesNavTitle">
@@ -15,14 +20,6 @@
     {{-- Main Content --}}
     <section class="py-8 px-4">
         <div class="max-w-7xl mx-auto space-y-4">
-            
-            {{-- Feedback Messages --}}
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             @if ($errors->has('role'))
                 <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     {{ $errors->first('role') }}

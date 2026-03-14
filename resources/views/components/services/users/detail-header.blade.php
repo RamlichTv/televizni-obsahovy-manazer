@@ -28,7 +28,15 @@
 
         @can('manage_users')
             @if (!auth()->user()->is($user))
-                <form method="POST" action="{{ route('users.destroy', ['user' => $user]) }}" onsubmit="return confirm('{{ __('Delete this user?') }}');">
+                <form
+                    method="POST"
+                    action="{{ route('users.destroy', ['user' => $user]) }}"
+                    data-confirm-title="{{ __('Delete user') }}"
+                    data-confirm-message="{{ __('Delete the user :name?', ['name' => $user->name ?: $user->username]) }}"
+                    data-confirm-label="{{ __('Delete') }}"
+                    data-cancel-label="{{ __('Cancel') }}"
+                    data-confirm-variant="danger"
+                >
                     @csrf
                     @method('DELETE')
                     <x-danger-button>

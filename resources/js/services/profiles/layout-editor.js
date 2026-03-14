@@ -56,10 +56,6 @@ export function profileLayoutEditor(config = {}) {
         selectedPlacementId: null,
         dragPayload: null,
         isSaving: false,
-        flash: {
-            message: '',
-            type: 'success',
-        },
         resizeState: null,
         boundResizeMove: null,
         boundResizeEnd: null,
@@ -360,7 +356,15 @@ export function profileLayoutEditor(config = {}) {
                 return;
             }
 
-            if (!window.confirm(i18n.confirmDeletePage)) {
+            const confirmed = await window.appConfirm({
+                title: i18n.deletePageTitle ?? 'Delete Page',
+                message: i18n.confirmDeletePage,
+                confirmLabel: i18n.deleteAction ?? 'Delete',
+                cancelLabel: i18n.cancelAction ?? 'Cancel',
+                confirmVariant: 'danger',
+            });
+
+            if (!confirmed) {
                 return;
             }
 
@@ -727,7 +731,15 @@ export function profileLayoutEditor(config = {}) {
                 return;
             }
 
-            if (!window.confirm(i18n.confirmRemoveModule)) {
+            const confirmed = await window.appConfirm({
+                title: i18n.removeModuleTitle ?? 'Remove Module',
+                message: i18n.confirmRemoveModule,
+                confirmLabel: i18n.deleteAction ?? 'Delete',
+                cancelLabel: i18n.cancelAction ?? 'Cancel',
+                confirmVariant: 'danger',
+            });
+
+            if (!confirmed) {
                 return;
             }
 
@@ -859,16 +871,23 @@ export function profileLayoutEditor(config = {}) {
                 .replace('__PLACEMENT__', placementId);
         },
 
-        // Show success banner in shared flash component.
+        // Send successful async actions through the shared toast host.
         flashSuccess(message) {
-            this.flash.message = message;
-            this.flash.type = 'success';
+            // Route async layout updates through the shared toast host so the editor matches
+            // redirect-based feedback elsewhere in the app.
+            window.appToast?.({
+                type: 'success',
+                message,
+            });
         },
 
-        // Show error banner in shared flash component.
+        // Send failed async actions through the shared toast host.
         flashError(message) {
-            this.flash.message = message;
-            this.flash.type = 'error';
+            // Route async layout failures through the same light toast system.
+            window.appToast?.({
+                type: 'error',
+                message,
+            });
         },
 
         // Unified JSON request helper with validation-aware error extraction.

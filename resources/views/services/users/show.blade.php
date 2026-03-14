@@ -1,3 +1,8 @@
+{{--
+    User detail page.
+    It keeps entity-specific errors inline while generic success banners are handled by the global toast host.
+--}}
+
 <x-app-layout title="{{ __('User Detail') }}">
     <x-slot name="usersNavTitle">
         {{ __('Detail') }}
@@ -9,13 +14,6 @@
 
     <section class="py-8 px-4">
         <div class="max-w-5xl mx-auto space-y-6">
-            {{-- Operation feedback (for example after edit/delete redirect chains). --}}
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             @if ($errors->has('user'))
                 <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     {{ $errors->first('user') }}

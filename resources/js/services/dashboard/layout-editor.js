@@ -46,10 +46,6 @@ export function dashboardEditor(config = {}) {
         boundResizeMove: null,
         boundResizeEnd: null,
         onViewportResize: null,
-        flash: {
-            message: '',
-            type: 'success',
-        },
 
         // Normalize backend payload and initialize runtime listeners.
         init() {
@@ -657,13 +653,20 @@ export function dashboardEditor(config = {}) {
         },
 
         flashSuccess(message) {
-            this.flash.message = message;
-            this.flash.type = 'success';
+            // Route async save feedback through the shared toast host so editor and full-page
+            // actions use the same notification pattern.
+            window.appToast?.({
+                type: 'success',
+                message,
+            });
         },
 
         flashError(message) {
-            this.flash.message = message;
-            this.flash.type = 'error';
+            // Keep runtime errors in the same light toast system used across the app shell.
+            window.appToast?.({
+                type: 'error',
+                message,
+            });
         },
     };
 }

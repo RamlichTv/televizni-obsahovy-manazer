@@ -13,7 +13,15 @@
 
     {{-- Administrator role is protected from deletion. --}}
     @if ($role->name !== 'Administrator')
-        <form method="POST" action="{{ route('role.destroy', ['role' => $role]) }}" onsubmit="return confirm('{{ __('Delete this role?') }}');">
+        <form
+            method="POST"
+            action="{{ route('role.destroy', ['role' => $role]) }}"
+            data-confirm-title="{{ __('Delete role') }}"
+            data-confirm-message="{{ __('Delete the role :name?', ['name' => $role->name]) }}"
+            data-confirm-label="{{ __('Delete') }}"
+            data-cancel-label="{{ __('Cancel') }}"
+            data-confirm-variant="danger"
+        >
             @csrf
             @method('DELETE')
             <x-danger-button>{{ __('Delete') }}</x-danger-button>

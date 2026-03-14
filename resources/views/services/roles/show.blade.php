@@ -1,3 +1,8 @@
+{{--
+    Role detail page.
+    It keeps the role metadata layout intact while generic success feedback moves to the shared toast host.
+--}}
+
 <x-app-layout title="{{ __('Role Detail') }}">
     {{-- Roles Sub-Navigation Label --}}
     <x-slot name="rolesNavTitle">
@@ -28,13 +33,6 @@
     {{-- Main Content --}}
     <section class="py-8 px-4">
         <div class="max-w-5xl mx-auto space-y-6">
-
-            {{-- Feedback Message --}}
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                    {{ session('success') }}
-                </div>
-            @endif
 
             {{-- Role Metadata Card --}}
             <div class="bg-white shadow-sm sm:rounded-lg p-6">

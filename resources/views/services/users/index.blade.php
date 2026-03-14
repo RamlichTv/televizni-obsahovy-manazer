@@ -1,3 +1,8 @@
+{{--
+    Users service index page.
+    It keeps contextual user errors inline while generic success feedback now flows through the shared toast host.
+--}}
+
 <x-app-layout title="{{ __('Users') }}">
     <x-slot name="usersNavTitle">
         {{ __('Users') }}
@@ -39,14 +44,6 @@
         @endphp
 
         <div class="max-w-7xl mx-auto space-y-4">
-            
-            {{-- Flash and validation feedback for destructive operations (delete/sync failures). --}}
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             @if ($errors->has('user'))
                 <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     {{ $errors->first('user') }}
