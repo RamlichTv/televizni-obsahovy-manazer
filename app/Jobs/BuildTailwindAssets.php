@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Support\Events\EventLogger;
 use App\Support\Modules\TailwindBuild\ModuleTailwindSourceDumper;
 use App\Support\Modules\TailwindBuild\TailwindBuildStatus;
 use Illuminate\Bus\Queueable;
@@ -13,6 +14,9 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Process;
 use Throwable;
 
+/**
+ * Executes the queued Tailwind build and mirrors build outcomes into the event stream.
+ */
 class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable;
@@ -24,7 +28,7 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
     public int $timeout;
 
     /**
-     * Create a new instance.
+     * Initialize queue settings from module Tailwind build configuration.
      */
     public function __construct()
     {
@@ -33,9 +37,7 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
     }
 
     /**
-     * Unique id.
-     *
-     * @return string
+     * Keep concurrent dispatches coalesced into one build job.
      */
     public function uniqueId(): string
     {
@@ -43,9 +45,7 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
     }
 
     /**
-     * Unique for.
-     *
-     * @return int
+     * Retain uniqueness long enough for the queued build and retry window.
      */
     public function uniqueFor(): int
     {
@@ -53,11 +53,7 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
     }
 
     /**
-     * Handle.
-     *
-     * @param TailwindBuildStatus $status
-     * @param ModuleTailwindSourceDumper $sourceDumper
-     * @return void
+     * Run the build command, update cached status, and emit success/failure events.
      */
     public function handle(TailwindBuildStatus $status, ModuleTailwindSourceDumper $sourceDumper): void
     {
@@ -68,6 +64,16 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
         $command = trim((string) config('modules.tailwind_build.command', 'npm run build'));
         if ($command === '') {
             $status->markFailed('Tailwind build command is empty.');
+            // Emit an audit entry even for configuration mistakes so build issues stay visible.
+            EventLogger::record(
+                typeName: 'module_tailwind_build_failed',
+                message: 'Tailwind build failed because the configured command is empty.',
+                context: [
+                    'action' => 'modules.tailwind.build',
+                    'reason' => 'empty_command',
+                    'timeout_seconds' => $this->timeout,
+                ],
+            );
 
             return;
         }
@@ -78,6 +84,16 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
 
         if ($result->successful()) {
             $status->markSucceeded();
+            // Successful rebuilds help correlate module edits with generated assets.
+            EventLogger::record(
+                typeName: 'module_tailwind_build_succeeded',
+                message: 'Tailwind build completed successfully.',
+                context: [
+                    'action' => 'modules.tailwind.build',
+                    'command' => $command,
+                    'timeout_seconds' => $this->timeout,
+                ],
+            );
 
             return;
         }
@@ -91,17 +107,35 @@ class BuildTailwindAssets implements ShouldQueue, ShouldBeUnique
         }
 
         $status->markFailed($message);
+        // Persist the most useful available failure output into both cache state and events.
+        EventLogger::record(
+            typeName: 'module_tailwind_build_failed',
+            message: 'Tailwind build failed.',
+            context: [
+                'action' => 'modules.tailwind.build',
+                'command' => $command,
+                'timeout_seconds' => $this->timeout,
+                'error' => $message,
+            ],
+        );
     }
 
     /**
-     * Failed.
-     *
-     * @param Throwable|null $exception
-     * @return void
+     * Capture worker-level failures that bypass the normal `handle()` failure path.
      */
     public function failed(?Throwable $exception): void
     {
         // Persist failure in cache even when the worker marks the job as failed unexpectedly.
-        app(TailwindBuildStatus::class)->markFailed($exception?->getMessage() ?? 'Tailwind build job failed.');
+        $message = $exception?->getMessage() ?? 'Tailwind build job failed.';
+        app(TailwindBuildStatus::class)->markFailed($message);
+        EventLogger::record(
+            typeName: 'module_tailwind_build_failed',
+            message: 'Tailwind build job failed unexpectedly.',
+            context: [
+                'action' => 'modules.tailwind.build',
+                'error' => $message,
+                'timeout_seconds' => $this->timeout,
+            ],
+        );
     }
 }
