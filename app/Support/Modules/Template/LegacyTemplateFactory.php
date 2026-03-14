@@ -1684,7 +1684,6 @@ HTML;
     height: 100%;
     border: 0;
     background: white;
-    pointer-events: none;
 }
 .embedded-frame__empty {
     display: grid;
