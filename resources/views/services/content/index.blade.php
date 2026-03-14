@@ -79,7 +79,7 @@
                                 x-transition:leave="transform transition ease-in duration-200"
                                 x-transition:leave-start="translate-y-0 opacity-100 sm:scale-100"
                                 x-transition:leave-end="translate-y-4 opacity-0 sm:scale-95"
-                                class="flex w-full max-w-4xl max-h-[min(80vh,720px)] min-h-[24rem] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                                class="flex w-full max-w-4xl max-h-[min(80vh,720px)] min-h-96 flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
                             >
                                 <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
                                     <div class="flex items-start justify-between gap-4">

@@ -21,7 +21,7 @@
     x-init="init()"
     x-on:keydown.escape.window="isVisible ? closeToast() : null"
     x-cloak
-    class="pointer-events-none fixed inset-x-4 bottom-4 z-[80] flex justify-end sm:inset-x-auto sm:right-4 sm:bottom-4"
+    class="pointer-events-none fixed inset-x-4 bottom-4 z-80 flex justify-end sm:inset-x-auto sm:right-4 sm:bottom-4"
 >
     {{-- Toast card: compact, light, and visually consistent with the rest of the app. --}}
     <div
