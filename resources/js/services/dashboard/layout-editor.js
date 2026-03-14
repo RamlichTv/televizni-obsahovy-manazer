@@ -20,6 +20,9 @@
 export function dashboardEditor(config = {}) {
     const i18n = {
         moduleLabel: 'Module',
+        uncategorized: 'Uncategorized',
+        showSidebar: 'Show Sidebar',
+        hideSidebar: 'Hide Sidebar',
         maxRowsReached: 'Maximum row count reached.',
         rowOccupied: 'Cannot remove row because a module occupies it.',
         maxColumnsReached: 'Maximum column count reached.',
@@ -32,12 +35,15 @@ export function dashboardEditor(config = {}) {
     };
 
     return {
+        i18n,
         layout: config.layout ?? {},
         modules: Array.isArray(config.modules) ? config.modules : [],
         routes: config.routes ?? {},
         csrfToken: config.csrfToken ?? '',
         maxTracks: Number(config.maxTracks ?? 24),
         moduleSearch: '',
+        sidebarOpen: true,
+        openModuleGroups: {},
         selectedPlacementId: null,
         dragPayload: null,
         isSaving: false,
@@ -50,6 +56,7 @@ export function dashboardEditor(config = {}) {
         // Normalize backend payload and initialize runtime listeners.
         init() {
             this.layout = this.normalizeLayout(this.layout);
+            this.initializeModuleGroups();
             this.boundResizeMove = (event) => this.handleResizeMove(event);
             this.boundResizeEnd = () => this.endResize();
             this.onViewportResize = () => {
@@ -171,6 +178,75 @@ export function dashboardEditor(config = {}) {
                 const category = String(module.category ?? '').toLowerCase();
                 return name.includes(search) || category.includes(search);
             });
+        },
+
+        initializeModuleGroups() {
+            for (const module of this.modules) {
+                const key = this.moduleCategoryKey(module.category);
+                if (!(key in this.openModuleGroups)) {
+                    this.openModuleGroups[key] = true;
+                }
+            }
+        },
+
+        moduleCategoryKey(category) {
+            const value = String(category ?? '').trim();
+            return value === '' ? '__uncategorized__' : value;
+        },
+
+        groupedModules() {
+            const groups = new Map();
+
+            for (const module of this.filteredModules()) {
+                const rawCategory = String(module.category ?? '').trim();
+                const key = this.moduleCategoryKey(rawCategory);
+                const label = rawCategory === '' ? i18n.uncategorized : rawCategory;
+
+                if (!(key in this.openModuleGroups)) {
+                    this.openModuleGroups[key] = true;
+                }
+
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        key,
+                        label,
+                        modules: [],
+                    });
+                }
+
+                groups.get(key).modules.push(module);
+            }
+
+            return Array.from(groups.values()).sort((first, second) => {
+                if (first.key === '__uncategorized__') {
+                    return 1;
+                }
+                if (second.key === '__uncategorized__') {
+                    return -1;
+                }
+
+                return first.label.localeCompare(second.label);
+            });
+        },
+
+        isModuleGroupOpen(groupKey) {
+            if (this.moduleSearch.trim() !== '') {
+                return true;
+            }
+
+            return this.openModuleGroups[groupKey] ?? true;
+        },
+
+        toggleModuleGroup(groupKey) {
+            if (this.moduleSearch.trim() !== '') {
+                return;
+            }
+
+            this.openModuleGroups[groupKey] = !this.isModuleGroupOpen(groupKey);
+        },
+
+        toggleSidebar() {
+            this.sidebarOpen = !this.sidebarOpen;
         },
 
         addTrack(currentSizes, targetCount) {
@@ -425,6 +501,18 @@ export function dashboardEditor(config = {}) {
 
         cellStyle(row, column) {
             return `grid-row:${row} / span 1; grid-column:${column} / span 1;`;
+        },
+
+        isCellCovered(rowIndex, columnIndex) {
+            return this.layout.placements.some((placement) => {
+                const rowEnd = placement.row_index + placement.row_span - 1;
+                const columnEnd = placement.column_index + placement.column_span - 1;
+
+                return rowIndex >= placement.row_index
+                    && rowIndex <= rowEnd
+                    && columnIndex >= placement.column_index
+                    && columnIndex <= columnEnd;
+            });
         },
 
         placementStyle(placement) {
