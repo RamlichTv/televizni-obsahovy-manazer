@@ -59,7 +59,7 @@
             
             {{-- Type and Expiration --}}
             <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                <span class="uppercase tracking-wide">{{ $content->type ? $content->type->name : 'Unknown' }}</span>
+                <span class="uppercase tracking-wide">{{ $content->type?->name ?? __('Unknown') }}</span>
                 @if($content->expires_at)
                     <span>• Exp: {{ \Carbon\Carbon::parse($content->expires_at)->format('d.m. y H:i') }}</span>
                 @endif

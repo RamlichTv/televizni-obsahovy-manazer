@@ -179,7 +179,7 @@
                         </form>
 
                         <div class="flex flex-1 items-center justify-center">
-                            <x-primary-button form="{{ $content->id }}_publish" class="flex flex-1 justify-center bg-lime-600 hover:bg-lime-500 text-white rounded-b-lg! rounded-t-none! shadow border-gray-200! px-2 p-1 z-0">
+                            <x-primary-button form="{{ $content->id }}_publish" class="flex flex-1 justify-center text-white rounded-b-lg! rounded-t-none! shadow border-gray-200! px-2 p-1 z-0">
                                 {{ __('Publish') }}
                                 <x-icon name="visible" class="w-4 h-4 ml-1"/>
                             </x-primary-button>

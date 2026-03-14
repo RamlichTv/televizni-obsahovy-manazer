@@ -288,7 +288,7 @@
                         </form>
                         <div class="flex justify-center">
                             <x-primary-button form="{{ $content->id }}_publish"
-                                class="flex bg-lime-600 hover:bg-lime-500 rounded-full! p-2">
+                                class="flex bg-[#077CB6]/85! hover:bg-[#077CB6]! rounded-full! p-2">
                                 {{ __('Publish') }}
                                 <x-icon name="visible" class="size-5 ml-1 font-semibold"/>
                             </x-primary-button>

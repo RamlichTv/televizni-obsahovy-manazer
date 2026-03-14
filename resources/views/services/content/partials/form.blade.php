@@ -51,7 +51,7 @@
                 >
 
                 <template x-if="isSingleSelectedFile">
-                    <div class="group relative flex min-h-[17rem] items-center justify-center p-6">
+                    <div class="group relative flex min-h-68 items-center justify-center p-6">
                         <button
                             type="button"
                             class="absolute inset-0 z-10"

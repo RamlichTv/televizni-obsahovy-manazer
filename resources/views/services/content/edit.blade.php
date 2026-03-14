@@ -185,7 +185,7 @@
                                         <video src="{{ $url }}" controls class="max-h-64 rounded shadow-sm"></video>
                                     @elseif($isPdf)
                                         <div class="w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-                                            <iframe src="{{ $url }}" title="{{ $name }}" class="h-[32rem] w-full bg-white"></iframe>
+                                            <iframe src="{{ $url }}" title="{{ $name }}" class="h-128 w-full bg-white"></iframe>
                                         </div>
                                     @else
                                         <div class="text-center text-gray-500">
