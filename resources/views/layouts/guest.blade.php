@@ -1,3 +1,8 @@
+{{--
+    Guest-facing authentication shell.
+    It also renders the global feedback hosts so login and password flows can use the same toast and modal system.
+--}}
+
 @props(['title'])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -28,5 +33,9 @@
                 {{ $slot }}
             </div>
         </div>
+
+        {{-- Shared feedback hosts are available here for auth-related status messaging. --}}
+        <x-toast />
+        <x-modal kind="system" />
     </body>
 </html>

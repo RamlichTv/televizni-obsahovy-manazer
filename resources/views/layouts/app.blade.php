@@ -1,3 +1,8 @@
+{{--
+    Standard authenticated app shell.
+    It renders shared navigation plus the global feedback hosts used by light-themed toasts and system modals.
+--}}
+
 @props(['title'])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -34,5 +39,9 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Shared feedback hosts stay outside page content so they can overlay every screen consistently. --}}
+        <x-toast />
+        <x-modal kind="system" />
     </body>
 </html>

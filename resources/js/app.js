@@ -2,12 +2,15 @@ import './bootstrap';
 import './services/dashboard/layout-editor';
 import './services/profiles/layout-editor';
 import './services/profiles/preview';
+import { initializeFeedbackSystem } from './feedback';
 import { moduleFormEditor } from './services/modules/form-editor';
 
 import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 window.moduleFormEditor = moduleFormEditor;
+
+initializeFeedbackSystem();
 
 Alpine.start();
 
