@@ -39,7 +39,11 @@
                     <form
                         action="{{ route('module.destroy', ['module' => $module]) }}"
                         method="POST"
-                        onsubmit="return confirm(@js(__('Are you sure you want to delete this module?')))"
+                        data-confirm-title="{{ __('Delete module') }}"
+                        data-confirm-message="{{ __('Are you sure you want to delete the module :name?', ['name' => $module->name]) }}"
+                        data-confirm-label="{{ __('Delete') }}"
+                        data-cancel-label="{{ __('Cancel') }}"
+                        data-confirm-variant="danger"
                     >
                         @csrf
                         @method('DELETE')
@@ -53,18 +57,6 @@
     </x-slot>
 
     <section class="mx-auto w-full max-w-7xl p-3 md:p-5" x-data="{ sidebarOpen: true, sidebarTab: 'code', codeTab: 'html' }">
-        @if (session('success'))
-            <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if (session('error'))
-            <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {{ session('error') }}
-            </div>
-        @endif
-
         @if ($errors->has('module'))
             <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {{ $errors->first('module') }}

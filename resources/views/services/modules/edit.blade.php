@@ -24,18 +24,6 @@
     </x-slot>
 
     <section class="py-6 px-3 md:px-4 space-y-6">
-        @if (session('success'))
-            <div class="mx-auto w-full max-w-7xl rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if (session('error'))
-            <div class="mx-auto w-full max-w-7xl rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {{ session('error') }}
-            </div>
-        @endif
-
         @if ($errors->has('module'))
             <div class="mx-auto w-full max-w-7xl rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {{ $errors->first('module') }}
@@ -75,7 +63,11 @@
                         action="{{ route('module.destroy', ['module' => $module]) }}"
                         method="POST"
                         class="mt-4"
-                        onsubmit="return confirm(@js(__('Are you sure you want to delete this module?')))"
+                        data-confirm-title="{{ __('Delete module') }}"
+                        data-confirm-message="{{ __('Are you sure you want to delete the module :name?', ['name' => $module->name]) }}"
+                        data-confirm-label="{{ __('Delete') }}"
+                        data-cancel-label="{{ __('Cancel') }}"
+                        data-confirm-variant="danger"
                     >
                         @csrf
                         @method('DELETE')

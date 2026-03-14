@@ -47,7 +47,11 @@
                 <form
                     action="{{ route('module.destroy', ['module' => $module]) }}"
                     method="POST"
-                    onsubmit="return confirm(@js(__('Are you sure you want to delete this module?')))"
+                    data-confirm-title="{{ __('Delete module') }}"
+                    data-confirm-message="{{ __('Are you sure you want to delete the module :name?', ['name' => $module->name]) }}"
+                    data-confirm-label="{{ __('Delete') }}"
+                    data-cancel-label="{{ __('Cancel') }}"
+                    data-confirm-variant="danger"
                 >
                     @csrf
                     @method('DELETE')
