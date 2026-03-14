@@ -6,7 +6,7 @@
             @case('content.create') {{ __('Create') }} @break
             @case('content.unpublished') {{ __('Unpublished') }} @break
             @case('content.library') {{ __('Library') }} @break
-            @case('content.manage') {{ __('My content') }} @break
+            @case('content.my') {{ __('My content') }} @break
             @case('content.archived') {{ __('Archived') }} @break
             @case('content.deleted') {{ __('Deleted') }} @break
             @default {{ __('Content') }}

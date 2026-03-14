@@ -235,10 +235,10 @@
                         ? route('role.edit', ['role' => $event->role])
                         : null;
                     $tagHref = $canAccessContentArea && $event->tag
-                        ? route('content.manage', ['tag_ids' => [$event->tag->id]])
+                        ? route('content.library', ['tag_ids' => [$event->tag->id]])
                         : null;
                     $contentTypeHref = $canAccessContentArea && $event->contentType
-                        ? route('content.manage', ['type_ids' => [$event->contentType->id]])
+                        ? route('content.library', ['type_ids' => [$event->contentType->id]])
                         : null;
                     $moduleCategoryHref = $canAccessModulesArea && $event->moduleCategory
                         ? route('modules.index', ['category' => $event->moduleCategory->id])
