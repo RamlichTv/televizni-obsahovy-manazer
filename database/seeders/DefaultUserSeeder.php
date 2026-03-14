@@ -16,7 +16,7 @@ class DefaultUserSeeder extends Seeder
 
         DB::table('users')->insert([
             'id'       => $userId,
-            'name'     => 'Administrator',
+            'name'     => __('Administrator'),
             'username' => 'admin',
             'email'    => 'vanicek@spsjc.cz',
             'password' => Hash::make('Aa123456'), //⚠️!!CHANGE!!⚠️

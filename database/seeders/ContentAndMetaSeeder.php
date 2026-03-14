@@ -19,22 +19,22 @@ class ContentAndMetaSeeder extends Seeder
         ];
 
         $types = [
-            ['name' => 'Photo',   'extension_whitelist' => json_encode(['jpg','jpeg','png','gif']), 'max_size' => 5 * $MB, 'is_file' => true,  'multiple_file' => false],
-            ['name' => 'Gallery', 'extension_whitelist' => json_encode(['jpg','jpeg','png','gif']), 'max_size' => 5 * $MB, 'is_file' => true,  'multiple_file' => true],
-            ['name' => 'Poster',  'extension_whitelist' => json_encode(['jpg','jpeg','png','svg']), 'max_size' => 5 * $MB, 'is_file' => true,  'multiple_file' => false],
-            ['name' => 'Video',   'extension_whitelist' => json_encode(['mp4','webm','mov']), 'max_size' => 100 * $MB, 'is_file' => true, 'multiple_file' => false],
-            ['name' => 'Document','extension_whitelist' => json_encode(['pdf']), 'max_size' => 10 * $MB, 'is_file' => true, 'multiple_file' => false],
-            ['name' => 'Text',    'extension_whitelist' => null, 'max_size' => null, 'is_file' => false, 'multiple_file' => false],
+            ['name' => __('Photo'),   'extension_whitelist' => json_encode(['jpg','jpeg','png','gif']), 'max_size' => 5 * $MB, 'is_file' => true,  'multiple_file' => false],
+            ['name' => __('Gallery'), 'extension_whitelist' => json_encode(['jpg','jpeg','png','gif']), 'max_size' => 5 * $MB, 'is_file' => true,  'multiple_file' => true],
+            ['name' => __('Poster'),  'extension_whitelist' => json_encode(['jpg','jpeg','png','svg']), 'max_size' => 5 * $MB, 'is_file' => true,  'multiple_file' => false],
+            ['name' => __('Video'),   'extension_whitelist' => json_encode(['mp4','webm','mov']), 'max_size' => 100 * $MB, 'is_file' => true, 'multiple_file' => false],
+            ['name' => __('Document'),'extension_whitelist' => json_encode(['pdf']), 'max_size' => 10 * $MB, 'is_file' => true, 'multiple_file' => false],
+            ['name' => __('Text'),    'extension_whitelist' => null, 'max_size' => null, 'is_file' => false, 'multiple_file' => false],
         ];
 
         $tags = [
-            ['name' => 'oznámení'],
-            ['name' => 'událost'],
-            ['name' => 'sport'],
-            ['name' => 'soutěž'],
-            ['name' => 'novinky'],
-            ['name' => 'reportáž'],
-            ['name' => 'propagační'],
+            ['name' => strtolower(__('Announcement'))],
+            ['name' => strtolower(__('Event'))],
+            ['name' => strtolower(__('Sport'))],
+            ['name' => strtolower(__('Competition'))],
+            ['name' => strtolower(__('News'))],
+            ['name' => strtolower(__('Reportage'))],
+            ['name' => strtolower(__('Promotional'))],
         ];
 
         DB::table('content_statuses')->insert($statuses);

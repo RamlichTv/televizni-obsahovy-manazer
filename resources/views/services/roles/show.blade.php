@@ -70,8 +70,14 @@
                     <h2 class="text-base font-semibold text-gray-900">{{ __('Permissions') }}</h2>
                     <div class="mt-3 flex flex-wrap gap-2">
                         @forelse ($role->permissions as $permission)
+                            @php
+                                $permissionLabel = __($permission->name);
+                                if ($permissionLabel === $permission->name) {
+                                    $permissionLabel = (string) \Illuminate\Support\Str::of($permission->name)->replace('_', ' ')->title();
+                                }
+                            @endphp
                             <span class="inline-flex items-center rounded-full bg-[#077CB6]/10 px-3 py-1 text-xs font-medium text-[#077CB6]">
-                                {{ $permission->name }}
+                                {{ $permissionLabel }}
                             </span>
                         @empty
                             <p class="text-sm text-gray-500">{{ __('No permissions assigned.') }}</p>
