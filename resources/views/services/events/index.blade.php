@@ -205,6 +205,11 @@
                     /** @var \App\Models\Event $event */
                     $severityName = strtolower($event->type?->severityType?->name ?? 'info');
                     $severityClass = $severityClassMap[$severityName] ?? $severityClassMap['info'];
+                    $eventTypeName = (string) ($event->type?->name ?? '');
+                    $eventTypeLabel = $eventTypeName !== '' ? __($eventTypeName) : '';
+                    if ($eventTypeLabel === $eventTypeName) {
+                        $eventTypeLabel = (string) \Illuminate\Support\Str::of($eventTypeName)->replace('_', ' ')->replace('-', ' ')->title();
+                    }
                     $context = (array) ($event->context ?? []);
                     $diffData = $buildDiffData($context);
                     $diffRows = $diffData['rows'];
@@ -299,10 +304,10 @@
                                 <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
                                     <div>
                                         <span class="inline-flex items-center rounded-md px-2.5 py-1 font-semibold {{ $severityClass }}">
-                                            {{ ucfirst($severityName) }}
+                                            {{ ucfirst(__($severityName)) }}
                                         </span>
                                         <span class="rounded-md bg-gray-100 px-2.5 py-1 text-gray-800">
-                                            {{ $event->type?->name ?? __('Unknown type') }}
+                                            {{ $eventTypeLabel !== '' ? $eventTypeLabel : __('Unknown type') }}
                                         </span>
                                     </div>
                                     @if($event->user)

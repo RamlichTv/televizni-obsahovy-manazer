@@ -40,15 +40,31 @@
         ->values();
 
     // Multi-select picker consumes items in a simple {id, name} shape.
-    $typeOptionsForPicker = collect($types)->map(fn ($type) => [
-        'id' => (string) $type->id,
-        'name' => (string) $type->name,
-    ])->values();
+    $typeOptionsForPicker = collect($types)->map(function ($type) {
+        $name = (string) $type->name;
+        $translated = __($name);
+        if ($translated === $name) {
+            $translated = (string) \Illuminate\Support\Str::of($name)->replace('_', ' ')->replace('-', ' ')->title();
+        }
 
-    $severityOptionsForPicker = collect($severityTypes)->map(fn ($severityType) => [
-        'id' => (string) $severityType->id,
-        'name' => ucfirst((string) $severityType->name),
-    ])->values();
+        return [
+            'id' => (string) $type->id,
+            'name' => $translated,
+        ];
+    })->values();
+
+    $severityOptionsForPicker = collect($severityTypes)->map(function ($severityType) {
+        $name = (string) $severityType->name;
+        $translated = __($name);
+        if ($translated === $name) {
+            $translated = $name;
+        }
+
+        return [
+            'id' => (string) $severityType->id,
+            'name' => ucfirst($translated),
+        ];
+    })->values();
 
     $userOptionsForPicker = collect($users)->map(fn ($user) => [
         'id' => (string) $user->id,
