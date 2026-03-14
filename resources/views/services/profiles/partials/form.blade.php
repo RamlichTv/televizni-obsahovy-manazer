@@ -62,16 +62,10 @@
         <div class="md:col-span-2">
             <x-input-label for="name" :value="__('Name')" :required="true"/>
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required />
-            <x-input-error class="mt-2" :messages="$errors->get('name')" />
-        </div>
-
-        <div>
-            <x-input-label for="slug" :value="__('Slug (optional)')" />
-            <x-text-input id="slug" name="slug" type="text" class="mt-1 block w-full" :value="old('slug')" />
             <p class="mt-1 text-xs text-gray-500">
-                {{ __('Used in the URL. Example: "main-lobby". Leave empty to generate automatically from the profile name.') }}
+                {{ __('The URL slug is generated automatically from this name.') }}
             </p>
-            <x-input-error class="mt-2" :messages="$errors->get('slug')" />
+            <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
         <div class="md:col-span-2">

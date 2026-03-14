@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Tom\Services;
 
-use App\Models\Profile;
 use Illuminate\Validation\Rule;
 
 class ProfileRequest extends \Illuminate\Foundation\Http\FormRequest
@@ -24,11 +23,8 @@ class ProfileRequest extends \Illuminate\Foundation\Http\FormRequest
      */
     public function rules() : array
     {
-        $profileId = $this->route('profile')?->id;
-
         $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', Rule::unique(Profile::class, 'slug')->ignore($profileId)],
             'description' => ['nullable', 'string', 'max:2000'],
             'settings' => ['nullable', 'array'],
             'settings.playback' => ['nullable', 'array'],
@@ -63,11 +59,6 @@ class ProfileRequest extends \Illuminate\Foundation\Http\FormRequest
     protected function prepareForValidation() : void
     {
         $normalized = [];
-
-        if (is_string($this->input('slug'))) {
-            $slug = trim((string) $this->input('slug'));
-            $normalized['slug'] = $slug !== '' ? $slug : null;
-        }
 
         $settings = $this->input('settings');
         if (is_string($settings)) {

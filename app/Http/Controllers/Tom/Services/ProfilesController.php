@@ -113,10 +113,7 @@ class ProfilesController extends Controller
         $validated = $request->validated();
 
         $profile = DB::transaction(function () use ($validated, $request): Profile {
-            $slug = $this->resolveUniqueSlug(
-                name: (string) $validated['name'],
-                requestedSlug: is_string($validated['slug'] ?? null) ? $validated['slug'] : null,
-            );
+            $slug = $this->resolveUniqueSlug((string) $validated['name']);
 
             $profile = Profile::create([
                 'name' => (string) $validated['name'],
@@ -252,11 +249,7 @@ class ProfilesController extends Controller
 
         $profile->update([
             'name' => (string) $validated['name'],
-            'slug' => $this->resolveUniqueSlug(
-                name: (string) $validated['name'],
-                requestedSlug: is_string($validated['slug'] ?? null) ? $validated['slug'] : null,
-                ignoreProfileId: $profile->id,
-            ),
+            'slug' => $this->resolveUniqueSlug((string) $validated['name'], $profile->id),
             'description' => $validated['description'] ?? null,
             'settings' => is_array($validated['settings'] ?? null) ? $validated['settings'] : [],
             'version' => $this->profileVersionNext($profile),
@@ -439,17 +432,15 @@ class ProfilesController extends Controller
     }
 
     /**
-     * Resolve a unique profile slug from name and optional requested slug.
+     * Resolve a unique profile slug from the profile name.
      *
      * @param string $name
-     * @param string|null $requestedSlug
      * @param string|null $ignoreProfileId
      * @return string
      */
-    private function resolveUniqueSlug(string $name, ?string $requestedSlug = null, ?string $ignoreProfileId = null): string
+    private function resolveUniqueSlug(string $name, ?string $ignoreProfileId = null): string
     {
-        $seed = trim((string) $requestedSlug) !== '' ? (string) $requestedSlug : $name;
-        $baseSlug = Str::slug($seed);
+        $baseSlug = Str::slug($name);
         if ($baseSlug === '') {
             $baseSlug = 'profile';
         }
@@ -457,7 +448,8 @@ class ProfilesController extends Controller
         $slug = $baseSlug;
         $suffix = 2;
         while (
-            Profile::query()
+            in_array($slug, ['create'], true)
+            || Profile::withTrashed()
                 ->where('slug', $slug)
                 ->when($ignoreProfileId !== null, fn (Builder $query) => $query->where('id', '!=', $ignoreProfileId))
                 ->exists()

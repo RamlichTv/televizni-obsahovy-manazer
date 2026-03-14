@@ -48,7 +48,7 @@
     $transition = (string) old('settings.animation.transition', $animation['transition'] ?? 'slide');
 @endphp
 
-{{-- Main metadata form: name/slug/description are saved through profile.update route. --}}
+{{-- Main metadata form: name/description/settings are saved through profile.update route. --}}
 <form
     method="POST"
     action="{{ route('profile.update', ['profile' => $profile]) }}"
@@ -84,22 +84,25 @@
                 :value="old('name', $profile->name)"
                 required
             />
+            <p class="mt-1 text-xs text-gray-500">
+                {{ __('The URL slug is generated automatically from this name.') }}
+            </p>
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
         <div>
-            <x-input-label for="profile_slug" :value="__('Slug (optional)')" />
+            <x-input-label for="profile_slug_preview" :value="__('URL Slug')" />
             <x-text-input
-                id="profile_slug"
-                name="slug"
+                id="profile_slug_preview"
                 type="text"
-                class="mt-1 block w-full"
-                :value="old('slug', $profile->slug)"
+                class="mt-1 block w-full bg-gray-50 text-gray-500"
+                :value="$profile->slug"
+                readonly
+                disabled
             />
             <p class="mt-1 text-xs text-gray-500">
-                {{ __('Used in the URL. Leave empty to regenerate from profile name.') }}
+                {{ __('Updated automatically when you rename the profile.') }}
             </p>
-            <x-input-error class="mt-2" :messages="$errors->get('slug')" />
         </div>
 
         <div class="md:col-span-2">

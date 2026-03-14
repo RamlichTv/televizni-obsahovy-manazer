@@ -38,6 +38,16 @@ class Profile extends Model
     }
 
     /**
+     * Use slug-based route model binding for all profile URLs.
+     *
+     * @return string
+     */
+    public function getRouteKeyName() : string
+    {
+        return 'slug';
+    }
+
+    /**
      * Pages.
      *
      * @return HasMany
@@ -66,4 +76,3 @@ class Profile extends Model
         return $this->hasMany(Screen::class);
     }
 }
-
