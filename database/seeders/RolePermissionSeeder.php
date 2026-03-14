@@ -11,7 +11,7 @@ class RolePermissionSeeder extends Seeder
     {
         $roles = [
             ['name' => 'Administrator', 'color' => '#ED4245', 'is_hidden' => true, 'created_by' => null],
-            ['name' => 'Media Team', 'color' => '#5865F2', 'is_hidden' => false, 'created_by' => null],
+            ['name' => __('Media Team'), 'color' => '#5865F2', 'is_hidden' => false, 'created_by' => null],
         ];
 
         $perms = [
@@ -33,6 +33,8 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'create_modules'],
             ['name' => 'edit_modules'],
             ['name' => 'delete_modules'],
+            ['name' => 'manage_module_javascript'],
+            ['name' => 'manage_embedded_modules'],
             
             ['name' => 'manage_module_categories'],
             
@@ -49,7 +51,7 @@ class RolePermissionSeeder extends Seeder
         DB::table('roles')->insert($roles);
         DB::table('permissions')->insert($perms);
 
-        $mediaRoleId = DB::table('roles')->where('name', 'Media Team')->value('id');
+        $mediaRoleId = DB::table('roles')->where('name', __('Media Team'))->value('id');
         $mediaPerms = DB::table('permissions')
             ->whereIn('name', [
                 'create_content',

@@ -23,6 +23,7 @@ class ModuleCategoryRequest extends \Illuminate\Foundation\Http\FormRequest
     {
         $categoryId = $this->route('category')?->id;
         $isAdmin = (bool) ($this->user()?->isAdmin());
+        $canManageEmbedded = (bool) ($this->user()?->can('manage_embedded_modules'));
 
         // `is_system` is intentionally write-protected for non-admin users.
         return [
@@ -33,8 +34,21 @@ class ModuleCategoryRequest extends \Illuminate\Foundation\Http\FormRequest
                 Rule::unique(ModuleCategory::class, 'name')->ignore($categoryId),
             ],
             'is_widget' => ['nullable', 'boolean'],
+            'is_screensaver' => ['nullable', 'boolean'],
+            'allow_embedded' => $canManageEmbedded ? ['nullable', 'boolean'] : ['prohibited'],
             'is_system' => $isAdmin ? ['nullable', 'boolean'] : ['prohibited'],
         ];
     }
-}
 
+    /**
+     * Custom validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'allow_embedded.prohibited' => 'Only users with embedded module permission can change embedded category access.',
+        ];
+    }
+}

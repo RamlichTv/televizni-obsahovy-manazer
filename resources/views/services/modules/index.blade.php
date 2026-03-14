@@ -36,6 +36,7 @@
         @php
             $currentUser = Auth::user();
             $canManageCategories = (bool) ($currentUser?->can('manage_module_categories'));
+            $canManageEmbeddedModules = (bool) ($currentUser?->can('manage_embedded_modules'));
             $isAdminUser = (bool) ($currentUser?->isAdmin());
             $selectedCategoryIds = collect((array) ($filters['category_ids'] ?? []))
                 ->map(fn ($id) => (string) $id)
@@ -93,6 +94,7 @@
             <x-services.modules.category-sidebar
                 :categories="$categories"
                 :can-manage-categories="$canManageCategories"
+                :can-manage-embedded-modules="$canManageEmbeddedModules"
                 :is-admin-user="$isAdminUser"
             />
 

@@ -50,9 +50,14 @@
                 'key' => Str::slug((string) $groupName, '_'),
                 'name' => (string) $groupName,
                 'items' => collect($groupPermissions)->map(function ($permission) {
+                    $permissionLabel = __((string) $permission->name);
+                    if ($permissionLabel === (string) $permission->name) {
+                        $permissionLabel = (string) Str::of($permission->name)->replace('_', ' ')->title();
+                    }
+
                     return [
                         'id' => (string) $permission->id,
-                        'label' => (string) Str::of($permission->name)->replace('_', ' ')->title(),
+                        'label' => $permissionLabel,
                     ];
                 })->values()->all(),
             ];

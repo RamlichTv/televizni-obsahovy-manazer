@@ -42,12 +42,15 @@ class ModuleCategoriesController extends Controller
     {
         $validated = $request->validated();
         $isAdmin = (bool) ($request->user()?->isAdmin());
+        $canManageEmbedded = (bool) ($request->user()?->can('manage_embedded_modules'));
 
         // Non-admin users can never mark categories as system categories.
         $category = ModuleCategory::create([
             'name' => $validated['name'],
             'slug' => $this->resolveUniqueSlug($validated['name']),
             'is_widget' => (bool) ($validated['is_widget'] ?? false),
+            'is_screensaver' => (bool) ($validated['is_screensaver'] ?? false),
+            'allow_embedded' => $canManageEmbedded ? (bool) ($validated['allow_embedded'] ?? false) : false,
             'is_system' => $isAdmin ? (bool) ($validated['is_system'] ?? false) : false,
         ]);
 
@@ -59,6 +62,8 @@ class ModuleCategoriesController extends Controller
                 'category_id' => $category->id,
                 'category_slug' => $category->slug,
                 'is_widget' => (bool) $category->is_widget,
+                'is_screensaver' => (bool) $category->is_screensaver,
+                'allow_embedded' => (bool) $category->allow_embedded,
                 'is_system' => (bool) $category->is_system,
             ],
             userId: $request->user()?->id,
@@ -79,6 +84,7 @@ class ModuleCategoriesController extends Controller
     public function update(ModuleCategoryRequest $request, ModuleCategory $category): RedirectResponse
     {
         $isAdmin = (bool) ($request->user()?->isAdmin());
+        $canManageEmbedded = (bool) ($request->user()?->can('manage_embedded_modules'));
 
         // System categories are immutable for non-admin users.
         if ($category->is_system && !$isAdmin) {
@@ -101,6 +107,8 @@ class ModuleCategoriesController extends Controller
         $oldSlug = (string) $category->slug;
         $oldName = (string) $category->name;
         $oldWidget = (bool) $category->is_widget;
+        $oldScreensaver = (bool) $category->is_screensaver;
+        $oldAllowEmbedded = (bool) $category->allow_embedded;
         $oldSystem = (bool) $category->is_system;
         $newSlug = $this->resolveUniqueSlug($validated['name'], $category->id);
 
@@ -109,6 +117,10 @@ class ModuleCategoriesController extends Controller
             'name' => $validated['name'],
             'slug' => $newSlug,
             'is_widget' => (bool) ($validated['is_widget'] ?? false),
+            'is_screensaver' => (bool) ($validated['is_screensaver'] ?? false),
+            'allow_embedded' => $canManageEmbedded
+                ? (bool) ($validated['allow_embedded'] ?? false)
+                : (bool) $category->allow_embedded,
             'is_system' => $isAdmin ? (bool) ($validated['is_system'] ?? false) : (bool) $category->is_system,
         ]);
 
@@ -149,6 +161,10 @@ class ModuleCategoriesController extends Controller
                 'new_slug' => $newSlug,
                 'old_is_widget' => $oldWidget,
                 'new_is_widget' => (bool) $category->is_widget,
+                'old_is_screensaver' => $oldScreensaver,
+                'new_is_screensaver' => (bool) $category->is_screensaver,
+                'old_allow_embedded' => $oldAllowEmbedded,
+                'new_allow_embedded' => (bool) $category->allow_embedded,
                 'old_is_system' => $oldSystem,
                 'new_is_system' => (bool) $category->is_system,
             ],

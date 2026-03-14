@@ -6,6 +6,7 @@
 @props([
     'categories',
     'canManageCategories' => false,
+    'canManageEmbeddedModules' => false,
     'isAdminUser' => false,
 ])
 
@@ -42,6 +43,20 @@
                     <input type="checkbox" name="is_widget" value="1" class="rounded border-gray-300 text-[#077CB6] focus:ring-[#077CB6]">
                     {{ __('Widget Category') }}
                 </label>
+
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="is_screensaver" value="0">
+                    <input type="checkbox" name="is_screensaver" value="1" class="rounded border-gray-300 text-[#077CB6] focus:ring-[#077CB6]">
+                    {{ __('Screensaver Category') }}
+                </label>
+
+                @if ($canManageEmbeddedModules)
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="allow_embedded" value="0">
+                        <input type="checkbox" name="allow_embedded" value="1" class="rounded border-gray-300 text-[#077CB6] focus:ring-[#077CB6]">
+                        {{ __('Allow Embedded (iframe)') }}
+                    </label>
+                @endif
 
                 @if ($isAdminUser)
                     <label class="flex items-center gap-2 text-sm text-gray-700">
@@ -97,6 +112,12 @@
                                 </span>
                                 @if ($category->is_widget)
                                     <span class="rounded bg-sky-100 px-2 py-0.5 text-sky-800">{{ __('Widget') }}</span>
+                                @endif
+                                @if ($category->is_screensaver)
+                                    <span class="rounded bg-indigo-100 px-2 py-0.5 text-indigo-800">{{ __('Screensaver') }}</span>
+                                @endif
+                                @if ($category->allow_embedded)
+                                    <span class="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">{{ __('Embedded') }}</span>
                                 @endif
                                 @if ($isSystemCategory)
                                     <span class="rounded bg-gray-100 px-2 py-0.5 text-gray-700">{{ __('System') }}</span>
@@ -161,6 +182,32 @@
                                     >
                                     {{ __('Widget') }}
                                 </label>
+
+                                <label class="flex items-center gap-2 text-xs text-gray-600">
+                                    <input type="hidden" name="is_screensaver" value="0">
+                                    <input
+                                        type="checkbox"
+                                        name="is_screensaver"
+                                        value="1"
+                                        class="rounded border-gray-300 text-[#077CB6] focus:ring-[#077CB6]"
+                                        @checked($category->is_screensaver)
+                                    >
+                                    {{ __('Screensaver') }}
+                                </label>
+
+                                @if ($canManageEmbeddedModules)
+                                    <label class="flex items-center gap-2 text-xs text-gray-600">
+                                        <input type="hidden" name="allow_embedded" value="0">
+                                        <input
+                                            type="checkbox"
+                                            name="allow_embedded"
+                                            value="1"
+                                            class="rounded border-gray-300 text-[#077CB6] focus:ring-[#077CB6]"
+                                            @checked($category->allow_embedded)
+                                        >
+                                        {{ __('Allow Embedded (iframe)') }}
+                                    </label>
+                                @endif
 
                                 @if ($isAdminUser)
                                     <label class="flex items-center gap-2 text-xs text-gray-600">
