@@ -18,7 +18,7 @@
     </x-slot>
 
     <section class="py-8 px-4">
-        <div class="max-w-384 mx-auto">
+        <div class="mx-auto max-w-7xl">
             {{-- Reuse the shared screen form partial for create flow. --}}
             @include('services.screens.partials.form', [
                 'action' => route('screen.store'),

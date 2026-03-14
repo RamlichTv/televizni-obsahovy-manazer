@@ -23,7 +23,6 @@ class Screen extends Model
         'profile_id',
         'status_id',
         'orientation_id',
-        'hardware_id',
         'room_id',
         'description',
         'is_interactive',

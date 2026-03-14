@@ -25,6 +25,7 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
      */
     public function rules() : array
     {
+        // Edits need the current screen id so the screensaver uniqueness rule can ignore itself.
         $screen = $this->route('screen');
         $screenId = $screen instanceof Screen ? $screen->id : null;
 
@@ -35,7 +36,6 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'profile_id' => ['nullable', 'uuid', Rule::exists('profiles', 'id')],
             'status_id' => ['required', 'integer', Rule::exists('status_types', 'id')],
             'orientation_id' => ['nullable', 'integer', Rule::exists('orientation_types', 'id')],
-            'hardware_id' => ['nullable', 'string', 'max:255', Rule::unique(Screen::class, 'hardware_id')->ignore($screenId)],
             'room_id' => ['nullable', 'integer', Rule::exists('rooms', 'id')],
             'description' => ['nullable', 'string', 'max:5000'],
             'is_interactive' => ['nullable', 'boolean'],
@@ -123,7 +123,6 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'profile_id',
             'orientation_id',
             'room_id',
-            'hardware_id',
             'screensaver_module_id',
             'description',
             'height',
@@ -133,6 +132,7 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'last_seen_at',
         ];
 
+        // Normalize empty strings from selects/text inputs so nullable rules behave consistently.
         $normalized = [
             'is_interactive' => $this->boolean('is_interactive'),
             'ip_whitelist' => $this->normalizeIpInput(
@@ -160,6 +160,7 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             $refreshValue = trim($refreshValue);
         }
 
+        // The UI splits refresh into value + unit, but persistence still stores a single seconds column.
         if ($refreshValue === '' || $refreshValue === null) {
             $normalized['auto_refresh_value'] = null;
             $normalized['auto_refresh_interval'] = null;

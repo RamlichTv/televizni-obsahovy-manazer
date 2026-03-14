@@ -83,13 +83,37 @@
 
             <div class="mt-3 space-y-2 max-h-80 overflow-auto pr-1">
                 @forelse ($floors as $floor)
-                    <article class="rounded-lg border border-gray-200 bg-white p-3">
+                    @php
+                        $floorBreadcrumbParts = collect([
+                            trim((string) $floor->building?->name),
+                            trim((string) $floor->name),
+                        ])->filter()->values();
+                    @endphp
+                    <article class="min-h-[4.75rem] rounded-lg border border-gray-200 bg-white p-3">
                         {{-- Display mode for an existing floor row. --}}
                         <template x-if="editFloor !== {{ $floor->id }}">
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900">{{ $floor->name }}</p>
-                                    <p class="text-xs text-gray-500">{{ $floor->building?->name ?? __('No building') }}</p>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    @if ($floorBreadcrumbParts->isNotEmpty())
+                                        {{-- Arrow segments intentionally overlap so the OU path reads as one connected breadcrumb. --}}
+                                        <div class="flex min-w-0 h-8 items-center overflow-x-auto">
+                                            @foreach ($floorBreadcrumbParts as $part)
+                                                <span @class([
+                                                    'relative flex h-8 shrink-0 items-center border border-gray-400 bg-gray-50 px-3 text-[11px] font-bold text-gray-800 shadow-sm',
+                                                    $loop->first ? 'rounded-l-full pl-4' : '-ml-[0.875rem] border-l-0 pl-5',
+                                                    $loop->last ? 'rounded-r-full pr-4' : 'pr-5',
+                                                ])>
+                                                    <span class="relative z-30">{{ $part }}</span>
+                                                    @unless ($loop->last)
+                                                        <span class="pointer-events-none absolute right-1 -top-px z-20 h-8 w-8 rotate-45 border-t border-r border-gray-400 bg-gray-50"></span>
+                                                        <span class="absolute -right-1 z-[25] h-8 w-[80%] border-y border-gray-400"></span>
+                                                    @endunless
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <p class="text-sm font-semibold text-gray-900">{{ __('Unassigned') }}</p>
+                                    @endif
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button type="button" class="text-xs text-blue-600 hover:underline" @click="editFloor = {{ $floor->id }}">
@@ -134,7 +158,7 @@
                 @csrf
                 <x-input-label for="new_floor_name" :value="__('Add Floor')" />
                 <x-select name="building_id" id="new_floor_building" required>
-                    <option value="">{{ __('Select building') }}</option>
+                    <option value="" disabled>{{ __('Select building') }}</option>
                     @foreach ($buildings as $building)
                         <option value="{{ $building->id }}" @selected((string) old('building_id') === (string) $building->id)>
                             {{ $building->name }}
@@ -153,12 +177,38 @@
 
             <div class="mt-3 space-y-2 max-h-80 overflow-auto pr-1">
                 @forelse ($rooms as $room)
-                    <article class="rounded-lg border border-gray-200 bg-white p-3">
+                    @php
+                        $roomBreadcrumbParts = collect([
+                            trim((string) $room->floor?->building?->name),
+                            trim((string) $room->floor?->name),
+                            trim((string) $room->name),
+                        ])->filter()->values();
+                    @endphp
+                    <article class="min-h-[4.75rem] rounded-lg border border-gray-200 bg-white p-3">
                         {{-- Display mode for an existing room row. --}}
                         <template x-if="editRoom !== {{ $room->id }}">
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900">{{ $room->breadcrumbLabel(' > ') }}</p>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    @if ($roomBreadcrumbParts->isNotEmpty())
+                                        {{-- Reuse the same connected breadcrumb style for building -> floor -> room paths. --}}
+                                        <div class="flex min-w-0 items-center overflow-x-auto">
+                                            @foreach ($roomBreadcrumbParts as $part)
+                                                <span @class([
+                                                    'relative flex h-8 shrink-0 items-center border border-gray-400 bg-gray-50 px-3 text-[11px] font-bold text-gray-800 shadow-sm',
+                                                    $loop->first ? 'rounded-l-full pl-4' : '-ml-[0.875rem] border-l-0 pl-5',
+                                                    $loop->last ? 'rounded-r-full pr-4' : 'pr-5',
+                                                ])>
+                                                    <span class="relative z-30">{{ $part }}</span>
+                                                    @unless ($loop->last)
+                                                        <span class="pointer-events-none absolute right-1 -top-px z-20 h-8 w-8 rotate-45 border-t border-r border-gray-400 bg-gray-50"></span>
+                                                        <span class="absolute -right-1 z-[25] h-8 w-[80%] border-y border-gray-400"></span>
+                                                    @endunless
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <p class="text-sm font-semibold text-gray-900">{{ __('Unassigned') }}</p>
+                                    @endif
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button type="button" class="text-xs text-blue-600 hover:underline" @click="editRoom = {{ $room->id }}">
@@ -179,7 +229,7 @@
                                 @csrf
                                 @method('PATCH')
                                 <x-select name="floor_id" id="room_floor_{{ $room->id }}" required>
-                                    <option value="">{{ __('Select floor') }}</option>
+                                    <option value="" disabled>{{ __('Select floor') }}</option>
                                     @foreach ($floors as $floor)
                                         <option value="{{ $floor->id }}" @selected((int) ($room->floor_id ?? 0) === (int) $floor->id)>
                                             {{ $floor->breadcrumbLabel(' > ') }}
@@ -204,7 +254,7 @@
                 @csrf
                 <x-input-label for="new_room_name" :value="__('Add Room')" />
                 <x-select name="floor_id" id="new_room_floor" required>
-                    <option value="">{{ __('Select floor') }}</option>
+                    <option value="" disabled>{{ __('Select floor') }}</option>
                     @foreach ($floors as $floor)
                         <option value="{{ $floor->id }}" @selected((string) old('floor_id') === (string) $floor->id)>
                             {{ $floor->breadcrumbLabel(' > ') }}

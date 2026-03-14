@@ -65,7 +65,6 @@ class CreateScreensAndTypesTables extends Migration
             $table->uuid('profile_id')->nullable();
             $table->unsignedBigInteger('status_id')->nullable();
             $table->unsignedTinyInteger('orientation_id')->nullable();
-            $table->string('hardware_id')->nullable()->unique();
             $table->unsignedBigInteger('room_id')->nullable();
             $table->text('description')->nullable();
             $table->boolean('is_interactive')->default(false);

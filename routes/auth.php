@@ -49,8 +49,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ContentController::class, 'index'])
             ->name('index');
 
-        Route::get('/manage', [ContentController::class, 'manage'])
-            ->name('manage');
+        Route::get('/{username}/manage', [ContentController::class, 'manage'])
+            ->name('my');
 
         Route::get('/unpublished', [ContentController::class, 'unpublished'])
             ->middleware('can:publish_content')
@@ -191,49 +191,40 @@ Route::middleware('auth')->group(function () {
 
         // ## Viewing
         Route::get('/{profile}', [ProfilesController::class, 'show'])
-            ->whereUuid('profile')
             ->middleware('can:view,profile')
             ->name('show');
         
         // ## Editing
         Route::get('/{profile}/edit', [ProfilesController::class, 'edit'])
-            ->whereUuid('profile')
             ->middleware('can:update,profile')
             ->name('edit');
         Route::patch('/{profile}', [ProfilesController::class, 'update'])
-            ->whereUuid('profile')
             ->middleware('can:update,profile')
             ->name('update');
 
         // ## Profile pages
         Route::post('/{profile}/pages', [PagesController::class, 'store'])
-            ->whereUuid('profile')
             ->middleware('can:update,profile')
             ->name('pages.store');
         Route::patch('/{profile}/pages/{page}', [PagesController::class, 'update'])
-            ->whereUuid('profile')
             ->whereNumber('page')
             ->middleware('can:update,profile')
             ->name('pages.update');
         Route::delete('/{profile}/pages/{page}', [PagesController::class, 'destroy'])
-            ->whereUuid('profile')
             ->whereNumber('page')
             ->middleware('can:update,profile')
             ->name('pages.destroy');
 
         Route::post('/{profile}/pages/{page}/modules', [PagesController::class, 'storeModule'])
-            ->whereUuid('profile')
             ->whereNumber('page')
             ->middleware('can:update,profile')
             ->name('pages.modules.store');
         Route::patch('/{profile}/pages/{page}/modules/{placement}', [PagesController::class, 'updateModule'])
-            ->whereUuid('profile')
             ->whereNumber('page')
             ->whereNumber('placement')
             ->middleware('can:update,profile')
             ->name('pages.modules.update');
         Route::delete('/{profile}/pages/{page}/modules/{placement}', [PagesController::class, 'destroyModule'])
-            ->whereUuid('profile')
             ->whereNumber('page')
             ->whereNumber('placement')
             ->middleware('can:update,profile')
@@ -241,7 +232,6 @@ Route::middleware('auth')->group(function () {
         
         // ## Deleting
         Route::delete('/{profile}', [ProfilesController::class, 'destroy'])
-            ->whereUuid('profile')
             ->middleware('can:delete,profile')
             ->name('destroy');
     });

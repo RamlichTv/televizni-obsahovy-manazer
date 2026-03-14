@@ -14,10 +14,10 @@
     $statusLabel = $statusRaw !== '' ? ucfirst(__($statusRaw)) : __('Unknown');
     $orientationLabel = $screen->orientation?->name ? ucfirst(__((string) $screen->orientation->name)) : __('Unassigned');
     $profileLabel = $screen->profile?->name ?? __('Unassigned');
-    $hardwareLabel = $screen->hardware_id ?: __('No hardware ID');
     $resolutionWidth = (int) ($screen->width ?? 0);
     $resolutionHeight = (int) ($screen->height ?? 0);
 
+    // Mirror the monitor view so the summary card shows the effective playback canvas.
     if ($orientationRaw === 'portrait' && $resolutionWidth > $resolutionHeight) {
         [$resolutionWidth, $resolutionHeight] = [$resolutionHeight, $resolutionWidth];
     } elseif ($orientationRaw === 'landscape' && $resolutionHeight > $resolutionWidth) {
@@ -46,10 +46,7 @@
         <div class="relative overflow-hidden rounded-xl border-[6px] border-[#707070] bg-[#ececec]">
 
             <div class="relative flex min-h-44 flex-col justify-between p-4">
-                <div class="flex items-start justify-between gap-2">
-                    <p class="max-w-[60%] truncate rounded-md border border-[#c4c4c4] bg-[#efefef] px-2 py-1 text-[10px] font-semibold tracking-wide text-slate-600">
-                        {{ $hardwareLabel }}
-                    </p>
+                <div class="flex items-start justify-end gap-2">
                     <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $statusPillClasses }}">
                         <span class="inline-block size-1.5 rounded-full {{ $isOnlineLike ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
                         {{ $statusLabel }}

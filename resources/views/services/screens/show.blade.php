@@ -81,6 +81,7 @@
     <body class="h-screen w-screen overflow-hidden bg-gray-100 text-gray-900">
         <main
             class="relative h-full w-full"
+            {{-- Bootstrap the Alpine player with pre-normalized server data so the client only handles timing/state. --}}
             x-data="screenPlayer({
                 pageCount: {{ max(1, $pages->count()) }},
                 pageNames: @js($pages->pluck('name')->values()),
@@ -103,6 +104,7 @@
             x-on:touchstart.window.passive="handleUserActivity()"
         >
             @if ($screenMode === 'offline')
+                {{-- Offline/maintenance modes bypass normal profile playback completely. --}}
                 @if ($screensaverModule)
                     <section class="h-full w-full bg-slate-900 p-2">
                         <article class="h-full w-full min-h-0 overflow-hidden rounded-lg bg-white shadow-sm">
@@ -135,6 +137,7 @@
                     </section>
                 @endif
             @else
+                {{-- The viewport scales a fixed pixel canvas so rendered modules respect the configured screen size. --}}
                 <div class="absolute inset-0 overflow-hidden bg-gray-100" x-ref="viewport">
                     <div class="absolute overflow-hidden border border-gray-300 bg-gray-100 shadow-sm" :style="canvasStyle">
                         @if ($profile === null)
@@ -237,7 +240,7 @@
                                 type="button"
                                 x-show="pageCount > 1"
                                 x-cloak
-                                class="absolute left-0 top-1/2 z-30 -translate-y-1/2 rounded-r-full border border-gray-300 bg-white/95 p-1 py-4 text-gray-700 shadow-sm transition opacity-55 hover:opacity-100 hover:bg-white"
+                                class="absolute left-0 top-1/2 z-30 -translate-y-1/2 rounded-r-full border border-transparent bg-[#077cb6] p-1 py-4 text-white shadow-sm transition ease-in-out duration-150 hover:bg-[#E69C24] focus:bg-[#D78500] active:bg-[#D78500] focus:outline-none focus:ring-2 focus:ring-[#D78500] focus:ring-offset-2"
                                 @click="previousPage()"
                                 aria-label="{{ __('Previous page') }}"
                                 title="{{ __('Previous page') }}"
@@ -249,7 +252,7 @@
                                 type="button"
                                 x-show="pageCount > 1"
                                 x-cloak
-                                class="absolute right-0 top-1/2 z-30 -translate-y-1/2 rounded-l-full border border-gray-300 bg-white/95 p-1 py-4 text-gray-700 shadow-sm transition opacity-55 hover:opacity-100 hover:bg-white"
+                                class="absolute right-0 top-1/2 z-30 -translate-y-1/2 rounded-l-full border border-transparent bg-[#077cb6] p-1 py-4 text-white shadow-sm transition ease-in-out duration-150 hover:bg-[#E69C24] focus:bg-[#D78500] active:bg-[#D78500] focus:outline-none focus:ring-2 focus:ring-[#D78500] focus:ring-offset-2"
                                 @click="nextPage()"
                                 aria-label="{{ __('Next page') }}"
                                 title="{{ __('Next page') }}"

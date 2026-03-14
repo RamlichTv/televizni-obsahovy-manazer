@@ -12,7 +12,6 @@
                 </x-secondary-link>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800">{{ $screen->name }}</h1>
-                    <p class="text-xs text-gray-500">{{ $screen->hardware_id ?: __('No hardware ID') }}</p>
                 </div>
             </div>
 
@@ -23,7 +22,7 @@
     </x-slot>
 
     <section class="py-8 px-4">
-        <div class="max-w-384 mx-auto space-y-4">
+        <div class="mx-auto max-w-7xl space-y-4">
             @if (session('success'))
                 <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
                     {{ session('success') }}

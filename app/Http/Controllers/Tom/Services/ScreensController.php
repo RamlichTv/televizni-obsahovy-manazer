@@ -49,9 +49,9 @@ class ScreensController extends Controller
             ]);
 
         if ($search !== '') {
+            // Search follows the same OU chain users see in the UI: screen -> room -> floor -> building.
             $screensQuery->where(function ($query) use ($search): void {
                 $query->where('name', 'like', '%' . $search . '%')
-                    ->orWhere('hardware_id', 'like', '%' . $search . '%')
                     ->orWhereHas('profile', function ($profileQuery) use ($search): void {
                         $profileQuery->where('name', 'like', '%' . $search . '%');
                     })
@@ -68,6 +68,7 @@ class ScreensController extends Controller
         }
 
         $screensQuery
+            // Building/floor filters resolve through rooms because screens are assigned only to rooms.
             ->when($buildingIds !== [], function (Builder $query) use ($buildingIds): void {
                 $query->whereHas('room.floor', function (Builder $floorQuery) use ($buildingIds): void {
                     $floorQuery->whereIn('building_id', $buildingIds);
@@ -84,16 +85,12 @@ class ScreensController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Suggestions stay simple on purpose: they mirror the screen names operators expect to type.
         $searchSuggestions = Screen::query()
-            ->select(['name', 'hardware_id'])
+            ->select(['name'])
             ->orderBy('name')
             ->get()
-            ->flatMap(function (Screen $screen): array {
-                return [
-                    trim((string) $screen->name),
-                    trim((string) ($screen->hardware_id ?? '')),
-                ];
-            })
+            ->map(fn (Screen $screen): string => trim((string) $screen->name))
             ->filter()
             ->unique()
             ->values()
@@ -135,6 +132,7 @@ class ScreensController extends Controller
             ->values()
             ->all();
 
+        // Blacklist always wins, even if the same IP appears in the whitelist.
         if ($ip !== '' && in_array($ip, $blacklist, true)) {
             abort(403);
         }
@@ -197,7 +195,6 @@ class ScreensController extends Controller
                 'action' => 'screen.store',
                 'screen_id' => $screen->id,
                 'screen_name' => $screen->name,
-                'hardware_id' => $screen->hardware_id,
                 'profile_id' => $screen->profile_id,
                 'room_id' => $screen->room_id,
                 'screensaver_module_id' => $screen->screensaverModules()->value('modules.id'),
@@ -247,7 +244,6 @@ class ScreensController extends Controller
         $validated = $request->validated();
         $before = [
             'name' => $screen->name,
-            'hardware_id' => $screen->hardware_id,
             'profile_id' => $screen->profile_id,
             'room_id' => $screen->room_id,
             'status_id' => $screen->status_id,
@@ -271,8 +267,6 @@ class ScreensController extends Controller
                 'screen_id' => $screen->id,
                 'old_name' => $before['name'],
                 'new_name' => $screen->name,
-                'old_hardware_id' => $before['hardware_id'],
-                'new_hardware_id' => $screen->hardware_id,
                 'old_profile_id' => $before['profile_id'],
                 'new_profile_id' => $screen->profile_id,
                 'old_room_id' => $before['room_id'],
@@ -353,6 +347,7 @@ class ScreensController extends Controller
                 ->whereHas('moduleCategory', function (Builder $query): void {
                     $query->where('is_screensaver', true);
                 })
+                // Preserve the currently selected module during edit, but exclude modules already attached elsewhere.
                 ->where(function (Builder $query) use ($screenId): void {
                     $query->whereDoesntHave('screensaverScreens');
 
@@ -403,9 +398,6 @@ class ScreensController extends Controller
     {
         return [
             'name' => (string) $validated['name'],
-            'hardware_id' => trim((string) ($validated['hardware_id'] ?? '')) !== ''
-                ? (string) $validated['hardware_id']
-                : null,
             'profile_id' => $validated['profile_id'] ?? null,
             'status_id' => isset($validated['status_id']) ? (int) $validated['status_id'] : $fallbackStatusId,
             'orientation_id' => $validated['orientation_id'] ?? null,
