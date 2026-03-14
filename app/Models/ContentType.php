@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ContentType extends Model
 {
+    /**
+     * Mass-assignable content-type attributes.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
         'is_file',
@@ -15,6 +20,11 @@ class ContentType extends Model
         'max_size',
     ];
 
+    /**
+     * Native type casts for content-type flags and JSON metadata.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'is_file' => 'boolean',
         'multiple_file' => 'boolean',

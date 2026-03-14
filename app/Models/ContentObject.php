@@ -40,6 +40,32 @@ class ContentObject extends Model
     ];
 
     /**
+     * Presentation-friendly attributes exposed to module templates.
+     *
+     * These keep DB-backed HTML templates readable by avoiding deep `meta.*`
+     * lookups for common media and label values.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'file_url',
+        'file_items',
+        'primary_file',
+        'media_url',
+        'media_mime_type',
+        'media_is_image',
+        'media_is_video',
+        'media_is_pdf',
+        'has_media',
+        'type_name',
+        'author_name',
+        'status_name',
+        'tag_names',
+        'published_label',
+        'excerpt',
+    ];
+
+    /**
      * Booted.
      *
      * @return void
@@ -128,6 +154,16 @@ class ContentObject extends Model
     }
 
     /**
+     * Accessor for module template serialization.
+     *
+     * @return string|null
+     */
+    public function getFileUrlAttribute() : ?string
+    {
+        return $this->fileUrl();
+    }
+
+    /**
      * Normalize all file entries from content meta.
      *
      * @return array<int, array<string, mixed>>
@@ -176,6 +212,154 @@ class ContentObject extends Model
     }
 
     /**
+     * Accessor for module template serialization.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getFileItemsAttribute() : array
+    {
+        return $this->fileItems();
+    }
+
+    /**
+     * First resolved file item for templates that only need one visual.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getPrimaryFileAttribute() : ?array
+    {
+        return $this->fileItems()[0] ?? null;
+    }
+
+    /**
+     * Resolved media URL used by visual module templates.
+     *
+     * @return string|null
+     */
+    public function getMediaUrlAttribute() : ?string
+    {
+        return $this->getPrimaryFileAttribute()['url'] ?? $this->fileUrl();
+    }
+
+    /**
+     * Resolved media MIME type used by visual module templates.
+     *
+     * @return string|null
+     */
+    public function getMediaMimeTypeAttribute() : ?string
+    {
+        $primaryFile = $this->getPrimaryFileAttribute();
+        $mimeType = trim((string) ($primaryFile['mime_type'] ?? data_get($this->meta, 'mime_type', '')));
+
+        return $mimeType !== '' ? strtolower($mimeType) : null;
+    }
+
+    /**
+     * Whether the primary media is an image.
+     *
+     * @return bool
+     */
+    public function getMediaIsImageAttribute() : bool
+    {
+        return $this->detectMediaKind() === 'image';
+    }
+
+    /**
+     * Whether the primary media is a video.
+     *
+     * @return bool
+     */
+    public function getMediaIsVideoAttribute() : bool
+    {
+        return $this->detectMediaKind() === 'video';
+    }
+
+    /**
+     * Whether the primary media is a PDF.
+     *
+     * @return bool
+     */
+    public function getMediaIsPdfAttribute() : bool
+    {
+        return $this->detectMediaKind() === 'pdf';
+    }
+
+    /**
+     * Whether the content object exposes any visual media.
+     *
+     * @return bool
+     */
+    public function getHasMediaAttribute() : bool
+    {
+        return $this->getMediaUrlAttribute() !== null;
+    }
+
+    /**
+     * Flatten related type name for templates.
+     *
+     * @return string
+     */
+    public function getTypeNameAttribute() : string
+    {
+        return trim((string) ($this->type?->name ?? ''));
+    }
+
+    /**
+     * Flatten related author name for templates.
+     *
+     * @return string
+     */
+    public function getAuthorNameAttribute() : string
+    {
+        return trim((string) ($this->author?->name ?? ''));
+    }
+
+    /**
+     * Flatten related status name for templates.
+     *
+     * @return string
+     */
+    public function getStatusNameAttribute() : string
+    {
+        return trim((string) ($this->status?->name ?? ''));
+    }
+
+    /**
+     * Flatten related tag names for templates.
+     *
+     * @return array<int, string>
+     */
+    public function getTagNamesAttribute() : array
+    {
+        return $this->tags
+            ->pluck('name')
+            ->map(static fn ($name): string => trim((string) $name))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Human-friendly published timestamp for Mustache templates.
+     *
+     * @return string
+     */
+    public function getPublishedLabelAttribute() : string
+    {
+        return $this->published_at?->format('d.m.Y H:i') ?? '';
+    }
+
+    /**
+     * Short summary text for compact visual layouts.
+     *
+     * @return string
+     */
+    public function getExcerptAttribute() : string
+    {
+        return trim((string) Str::limit((string) ($this->description ?? ''), 160));
+    }
+
+    /**
      * Resolve one meta path to a public URL.
      *
      * @param string|null $rawPath
@@ -195,6 +379,51 @@ class ContentObject extends Model
         return Storage::disk('public')->exists($normalizedPath)
             ? asset('storage/' . $normalizedPath)
             : null;
+    }
+
+    /**
+     * Detect the primary media kind used by templates.
+     *
+     * @return string|null
+     */
+    private function detectMediaKind() : ?string
+    {
+        $url = strtolower((string) ($this->getMediaUrlAttribute() ?? ''));
+        $mimeType = strtolower((string) ($this->getMediaMimeTypeAttribute() ?? ''));
+        $name = strtolower((string) ($this->getPrimaryFileAttribute()['original_filename'] ?? ''));
+
+        if ($mimeType !== '') {
+            if (str_starts_with($mimeType, 'image/')) {
+                return 'image';
+            }
+
+            if (str_starts_with($mimeType, 'video/')) {
+                return 'video';
+            }
+
+            if ($mimeType === 'application/pdf') {
+                return 'pdf';
+            }
+        }
+
+        $path = (string) (parse_url($url, PHP_URL_PATH) ?: $url);
+        if (str_ends_with($path, '.pdf') || str_ends_with($name, '.pdf')) {
+            return 'pdf';
+        }
+
+        foreach (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'] as $extension) {
+            if (str_ends_with($path, $extension) || str_ends_with($name, $extension)) {
+                return 'image';
+            }
+        }
+
+        foreach (['.mp4', '.webm', '.ogg', '.mov'] as $extension) {
+            if (str_ends_with($path, $extension) || str_ends_with($name, $extension)) {
+                return 'video';
+            }
+        }
+
+        return null;
     }
 
     /**
