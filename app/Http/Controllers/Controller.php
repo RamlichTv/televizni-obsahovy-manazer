@@ -5,14 +5,17 @@ namespace App\Http\Controllers;
 use App\Support\Events\EventLogger;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Base controller with shared helpers for audit/event logging.
+ */
 abstract class Controller
 {
     /**
-     * Log event.
+     * Record an application event and mirror it to the standard log output.
      *
      * @param string $typeName
      * @param string $message
-     * @param array $context
+     * @param array<string, mixed> $context
      * @param string|null $userId
      * @param string|null $screenId
      * @param string|null $relatedContentId
@@ -45,10 +48,10 @@ abstract class Controller
     }
 
     /**
-     * Log failure.
+     * Convenience wrapper for logging a generic failed-operation event.
      *
      * @param string $message
-     * @param array $context
+     * @param array<string, mixed> $context
      * @param string|null $userId
      * @param string|null $screenId
      * @param string|null $relatedContentId

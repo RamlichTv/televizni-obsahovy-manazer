@@ -8,14 +8,17 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
+/**
+ * Central event persistence helper used by controllers, jobs, and console commands.
+ */
 class EventLogger
 {
     /**
-     * Persist an event log entry.
+     * Persist one event log entry if the event type exists and related models are valid.
      *
      * @param string $typeName
      * @param string $message
-     * @param array $context
+     * @param array<string, mixed> $context
      * @param string|null $userId
      * @param string|null $screenId
      * @param string|null $relatedContentId
@@ -57,6 +60,7 @@ class EventLogger
                 'related_user' => self::contextString($context, ['target_user_id']),
             ];
 
+            // Only write relation columns that both exist in schema and point to live models.
             $columnModelMap = [
                 'screen_id' => \App\Models\Screen::class,
                 'related_content' => \App\Models\ContentObject::class,
@@ -100,7 +104,7 @@ class EventLogger
     }
 
     /**
-     * Resolve event type id by lowercase name.
+     * Resolve an event type id from a case-insensitive type name.
      *
      * @param string $typeName
      * @return int|null
@@ -120,7 +124,7 @@ class EventLogger
     }
 
     /**
-     * Determine whether the events table contains a column.
+     * Determine whether the events table contains a column, with a simple local cache.
      *
      * @param string $column
      * @return bool
@@ -137,7 +141,7 @@ class EventLogger
     }
 
     /**
-     * Check whether a related model exists.
+     * Check whether a related model exists before storing its foreign key on the event.
      *
      * @param string $modelClass
      * @param int|string $key
@@ -155,8 +159,8 @@ class EventLogger
     /**
      * Extract first non-empty string value from context keys.
      *
-     * @param array $context
-     * @param array $keys
+     * @param array<string, mixed> $context
+     * @param array<int, string> $keys
      * @return string|null
      */
     private static function contextString(array $context, array $keys): ?string
@@ -178,9 +182,9 @@ class EventLogger
     /**
      * Extract first numeric scalar or array value from context keys.
      *
-     * @param array $context
-     * @param array $scalarKeys
-     * @param array $arrayKeys
+     * @param array<string, mixed> $context
+     * @param array<int, string> $scalarKeys
+     * @param array<int, string> $arrayKeys
      * @return int|null
      */
     private static function contextInt(array $context, array $scalarKeys, array $arrayKeys = []): ?int
@@ -211,4 +215,3 @@ class EventLogger
         return null;
     }
 }
-

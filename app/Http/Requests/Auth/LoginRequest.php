@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Validate login attempts and record failed authentication outcomes as events.
+ */
 class LoginRequest extends FormRequest
 {
     /**
@@ -47,6 +50,7 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
+            // Keep rejected credentials visible in the audit trail without storing the password.
             EventLogger::record(
                 typeName: 'user_login_failed',
                 message: 'Login failed for username "' . (string) $this->input('username') . '".',
@@ -81,6 +85,7 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
+        // Emit a distinct event when rate limiting, so brute-force lockouts are easy to spot.
         EventLogger::record(
             typeName: 'user_login_failed',
             message: 'Login blocked by rate limiter for username "' . (string) $this->input('username') . '".',
@@ -111,4 +116,3 @@ class LoginRequest extends FormRequest
         return Str::transliterate(Str::lower($this->string('username')).'|'.$this->ip());
     }
 }
-

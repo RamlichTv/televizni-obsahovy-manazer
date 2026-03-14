@@ -4,29 +4,32 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
+/**
+ * Create the core event/audit tables used by the event stream UI.
+ */
 class CreateEventsTables extends Migration
 {
+    /**
+     * Create severity, type, and event tables with optional foreign keys to audited models.
+     */
     public function up() : void
     {
-        // severity_types
-        // ##########################################################
+        // Severity buckets drive styling and filtering for event rows.
         Schema::create('severity_types', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->unique();
         });
 
-        // event_types
-        // ##########################################################
+        // Event types are stable identifiers such as `content_created` or `screen_offline`.
         Schema::create('event_types', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('name')->unique(); // content_added, tv_online, layout_changed...
+            $table->string('name')->unique();
             $table->unsignedBigInteger('severity')->nullable();
 
             $table->foreign('severity')->references('id')->on('severity_types')->onDelete('set null');
         });
 
-        // events
-        // ##########################################################
+        // Each row stores one emitted event with optional pointers to related domain records.
         Schema::create('events', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->text('message')->nullable();
@@ -62,6 +65,9 @@ class CreateEventsTables extends Migration
         });
     }
 
+    /**
+     * Drop event tables in reverse dependency order.
+     */
     public function down() : void
     {
         Schema::dropIfExists('events');

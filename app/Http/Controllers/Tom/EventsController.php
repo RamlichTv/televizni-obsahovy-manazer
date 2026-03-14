@@ -33,6 +33,7 @@ class EventsController extends Controller
         // Force an always-empty match when user can view events but has no service scope.
         $restrictedTypeIds = $visibleTypeIds === [] ? [-1] : $visibleTypeIds;
 
+        // Normalize all filter inputs before applying them to both list and filter UI state.
         $search = trim((string) $request->string('search'));
         $selectedTypeIds = $this->normalizeIntegerIds($request->input('type_ids', $request->input('type_id')));
         if (!$canViewAllEventTypes) {
@@ -43,6 +44,7 @@ class EventsController extends Controller
         $selectedSeverityIds = $this->normalizeIntegerIds($request->input('severity_ids', $request->input('severity_id')));
         $selectedUserIds = $this->normalizeStringIds($request->input('user_ids', $request->input('user_id')));
 
+        // Eager-load every model the event detail drawer can expand into.
         $events = Event::query()
             ->with([
                 'type:id,name,severity',
@@ -86,6 +88,7 @@ class EventsController extends Controller
             ->paginate(50)
             ->withQueryString();
 
+        // Keep auxiliary filter datasets constrained to the same visibility rules as the event list.
         return view('services.events.index', [
             'events' => $events,
             'types' => EventType::query()
