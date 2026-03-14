@@ -21,7 +21,7 @@
             <div class="mt-2 flex flex-wrap gap-2 text-xs">
                 @if ($module->moduleCategory)
                     <span class="rounded bg-gray-100 px-2 py-0.5 text-gray-700">
-                        {{ ucfirst($module->moduleCategory->name) }}
+                        {{ ucfirst((string) $module->moduleCategory->name) }}
                     </span>
                     @if ($module->moduleCategory->is_widget)
                         <span class="rounded bg-sky-100 px-2 py-0.5 text-sky-800">{{ __('Widget') }}</span>

@@ -56,11 +56,45 @@
     x-data="{
         open: false,
         search: '',
+        inputName: @js($inputName),
         items: @js($normalizedItems),
         selectedIds: @js($normalizedSelected),
 
+        normalizeSelectedIds(values) {
+            if (!Array.isArray(values)) {
+                return [];
+            }
+
+            return [...new Set(values
+                .map((value) => String(value).trim())
+                .filter((value) => value !== ''))];
+        },
+
+        syncSelectedIds(values) {
+            const normalized = this.normalizeSelectedIds(values);
+
+            if (JSON.stringify(normalized) === JSON.stringify(this.selectedIds)) {
+                return;
+            }
+
+            this.selectedIds = normalized;
+        },
+
         get selectedItems() {
-            return this.items.filter((item) => this.selectedIds.includes(String(item.id)));
+            return this.selectedIds.map((selectedId) => {
+                const existingItem = this.items.find((item) => String(item.id) === String(selectedId));
+
+                if (existingItem) {
+                    return existingItem;
+                }
+
+                return {
+                    id: String(selectedId),
+                    name: String(selectedId),
+                    color: null,
+                    badge: null,
+                };
+            });
         },
 
         get filteredItems() {
@@ -92,13 +126,26 @@
             }
 
             this.selectedIds.push(id);
+            this.$dispatch('multi-select-picker:change', {
+                inputName: @js($inputName),
+                selectedIds: [...this.selectedIds],
+            });
         },
 
         removeItem(itemId) {
             const id = String(itemId);
             this.selectedIds = this.selectedIds.filter((selectedId) => selectedId !== id);
+            this.$dispatch('multi-select-picker:change', {
+                inputName: @js($inputName),
+                selectedIds: [...this.selectedIds],
+            });
         },
-    }" 
+    }"
+    x-on:multi-select-picker:sync.window="
+        if ($event.detail.inputName === inputName) {
+            syncSelectedIds($event.detail.selectedIds);
+        }
+    "
     {{ $attributes }}
 >
     @if ($label !== '')

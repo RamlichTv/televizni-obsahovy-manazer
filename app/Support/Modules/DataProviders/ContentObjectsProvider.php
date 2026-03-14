@@ -40,6 +40,7 @@ class ContentObjectsProvider implements ModuleDataProvider
             ])
             ->with([
                 'author:id,name,username,avatar',
+                'status:id,name',
                 'tags:id,name',
                 'type:id,name',
             ]);
@@ -52,6 +53,7 @@ class ContentObjectsProvider implements ModuleDataProvider
         $this->applyStatusFilter($query, $filters);
         $this->applyTypeFilter($query, $filters);
         $this->applyTagFilter($query, $filters);
+        $this->applyAuthorFilter($query, $filters, $viewer);
 
         // Ordering is configurable but constrained to a safe allowlist.
         $orderBy = (string) Arr::get($source, 'order_by', 'priority');
@@ -102,14 +104,38 @@ class ContentObjectsProvider implements ModuleDataProvider
             return;
         }
 
-        $statusName = isset($filters['status_name']) ? trim((string) $filters['status_name']) : '';
-        if ($statusName !== '') {
-            $statusId = ContentStatus::query()
-                ->whereRaw('LOWER(name) = ?', [strtolower($statusName)])
-                ->value('id');
+        $statusIds = collect(Arr::get($filters, 'status_ids', []))
+            ->map(fn (mixed $value): int => (int) $value)
+            ->filter(fn (int $value): bool => $value > 0)
+            ->unique()
+            ->values();
+        if ($statusIds->isNotEmpty()) {
+            $query->whereIn('status_id', $statusIds->all());
+            return;
+        }
 
-            if ($statusId !== null) {
-                $query->where('status_id', $statusId);
+        $statusNames = $this->normalizeFilterNames(Arr::get($filters, 'status_names', []));
+        if ($statusNames === []) {
+            $statusName = isset($filters['status_name']) ? trim((string) $filters['status_name']) : '';
+            if ($statusName !== '') {
+                $statusNames = [mb_strtolower($statusName)];
+            }
+        }
+
+        if ($statusNames !== []) {
+            $resolvedStatusIds = ContentStatus::query()
+                ->where(function (Builder $builder) use ($statusNames): void {
+                    foreach ($statusNames as $statusName) {
+                        $builder->orWhereRaw('LOWER(name) = ?', [$statusName]);
+                    }
+                })
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($resolvedStatusIds->isNotEmpty()) {
+                $query->whereIn('status_id', $resolvedStatusIds->all());
                 return;
             }
         }
@@ -143,13 +169,34 @@ class ContentObjectsProvider implements ModuleDataProvider
             return;
         }
 
-        $typeName = isset($filters['type_name']) ? trim((string) $filters['type_name']) : '';
-        if ($typeName === '') {
+        $typeIds = collect(Arr::get($filters, 'type_ids', []))
+            ->map(fn (mixed $value): int => (int) $value)
+            ->filter(fn (int $value): bool => $value > 0)
+            ->unique()
+            ->values();
+        if ($typeIds->isNotEmpty()) {
+            $query->whereIn('type_id', $typeIds->all());
             return;
         }
 
-        $query->whereHas('type', function (Builder $builder) use ($typeName): void {
-            $builder->whereRaw('LOWER(name) = ?', [strtolower($typeName)]);
+        $typeNames = $this->normalizeFilterNames(Arr::get($filters, 'type_names', []));
+        if ($typeNames === []) {
+            $typeName = isset($filters['type_name']) ? trim((string) $filters['type_name']) : '';
+            if ($typeName !== '') {
+                $typeNames = [mb_strtolower($typeName)];
+            }
+        }
+
+        if ($typeNames === []) {
+            return;
+        }
+
+        $query->whereHas('type', function (Builder $builder) use ($typeNames): void {
+            $builder->where(function (Builder $nested) use ($typeNames): void {
+                foreach ($typeNames as $typeName) {
+                    $nested->orWhereRaw('LOWER(name) = ?', [$typeName]);
+                }
+            });
         });
     }
 
@@ -162,24 +209,111 @@ class ContentObjectsProvider implements ModuleDataProvider
      */
     private function applyTagFilter(Builder $query, array $filters): void
     {
-        $rawTagIds = Arr::get($filters, 'tag_ids', []);
-        if (!is_array($rawTagIds)) {
+        $tagId = isset($filters['tag_id']) ? (int) $filters['tag_id'] : null;
+        if ($tagId !== null && $tagId > 0) {
+            $query->whereHas('tags', function (Builder $builder) use ($tagId): void {
+                $builder->where('tags.id', $tagId);
+            });
+
             return;
         }
 
-        $tagIds = collect($rawTagIds)
-            ->map(fn (mixed $value) => (int) $value)
-            ->filter(fn (int $value) => $value > 0)
+        $rawTagIds = Arr::get($filters, 'tag_ids', []);
+        $tagIds = collect(is_array($rawTagIds) ? $rawTagIds : [])
+            ->map(fn (mixed $value): int => (int) $value)
+            ->filter(fn (int $value): bool => $value > 0)
             ->unique()
             ->values();
 
-        if ($tagIds->isEmpty()) {
+        if ($tagIds->isNotEmpty()) {
+            $query->whereHas('tags', function (Builder $builder) use ($tagIds): void {
+                $builder->whereIn('tags.id', $tagIds->all());
+            });
+
             return;
         }
 
-        $query->whereHas('tags', function (Builder $builder) use ($tagIds): void {
-            $builder->whereIn('tags.id', $tagIds->all());
+        $tagNames = $this->normalizeFilterNames(Arr::get($filters, 'tag_names', []));
+        if ($tagNames === []) {
+            $tagName = isset($filters['tag_name']) ? trim((string) $filters['tag_name']) : '';
+            if ($tagName !== '') {
+                $tagNames = [mb_strtolower($tagName)];
+            }
+        }
+
+        if ($tagNames === []) {
+            return;
+        }
+
+        $query->whereHas('tags', function (Builder $builder) use ($tagNames): void {
+            $builder->where(function (Builder $nested) use ($tagNames): void {
+                foreach ($tagNames as $tagName) {
+                    $nested->orWhereRaw('LOWER(name) = ?', [$tagName]);
+                }
+            });
         });
     }
-}
 
+    /**
+     * Apply author filters.
+     *
+     * The guided editor exposes a simple "current viewer" scope for dashboard
+     * widgets like personal content lists, while raw JSON can still target
+     * explicit author IDs when needed.
+     *
+     * @param Builder $query
+     * @param array $filters
+     * @param Authenticatable|null $viewer
+     * @return void
+     */
+    private function applyAuthorFilter(Builder $query, array $filters, ?Authenticatable $viewer = null): void
+    {
+        $authoredBy = strtolower(trim((string) Arr::get($filters, 'authored_by', '')));
+        if (in_array($authoredBy, ['viewer', 'current_user'], true)) {
+            $viewerId = (string) ($viewer?->getAuthIdentifier() ?? '');
+            if ($viewerId === '') {
+                $query->whereRaw('1 = 0');
+                return;
+            }
+
+            $query->where('author_id', $viewerId);
+            return;
+        }
+
+        $authorId = trim((string) Arr::get($filters, 'author_id', ''));
+        if ($authorId !== '') {
+            $query->where('author_id', $authorId);
+            return;
+        }
+
+        $authorIds = collect(Arr::get($filters, 'author_ids', []))
+            ->map(static fn (mixed $value): string => trim((string) $value))
+            ->filter(static fn (string $value): bool => $value !== '')
+            ->unique()
+            ->values();
+
+        if ($authorIds->isNotEmpty()) {
+            $query->whereIn('author_id', $authorIds->all());
+        }
+    }
+
+    /**
+     * Normalize mixed filter input to lowercase name values.
+     *
+     * @param mixed $value
+     * @return array<int, string>
+     */
+    private function normalizeFilterNames(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn (mixed $name): string => is_string($name) ? mb_strtolower(trim($name)) : '')
+            ->filter(fn (string $name): bool => $name !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+}

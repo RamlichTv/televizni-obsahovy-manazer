@@ -62,8 +62,8 @@ class ModuleRendererTest extends TestCase
             'revision' => 1,
             'template_path' => 'users/' . $author->username . '/modules/widget/module-1/v1.html',
             'template_checksum' => hash('sha256', 'template'),
-            'config_schema' => [],
-            'default_config' => ['title' => 'Poster list'],
+            'data_schema' => [],
+            'module_data' => ['title' => 'Poster list'],
             'data_source' => [
                 'provider' => 'content_objects',
                 'filters' => [
@@ -106,6 +106,68 @@ class ModuleRendererTest extends TestCase
     }
 
     /**
+     * Test sanitizer keeps allowed data and aria attributes while hardening blank-target links.
+     *
+     * @return void
+     */
+    public function test_sanitizer_preserves_allowed_metadata_attributes_and_hardens_blank_target_links(): void
+    {
+        $sanitized = app(ModuleRenderer::class)->sanitizeTemplate(
+            '<div data-item-id="42" aria-label="Poster card" onclick="alert(1)"><a href="/content" target="_blank">Open</a></div>'
+        );
+
+        $this->assertStringContainsString('data-item-id="42"', $sanitized);
+        $this->assertStringContainsString('aria-label="Poster card"', $sanitized);
+        $this->assertStringNotContainsString('onclick=', $sanitized);
+        $this->assertStringContainsString('target="_blank"', $sanitized);
+        $this->assertStringContainsString('rel="noopener noreferrer"', $sanitized);
+    }
+
+    /**
+     * Test sanitizer keeps iframe tags for categories that allow embedded content and pass URL whitelist checks.
+     *
+     * @return void
+     */
+    public function test_sanitizer_allows_iframe_when_embedding_is_enabled_and_url_is_whitelisted(): void
+    {
+        config()->set('modules.embedded_urls.whitelist', ['https://www.youtube.com/embed/']);
+        config()->set('modules.embedded_urls.blacklist', []);
+
+        $sanitized = app(ModuleRenderer::class)->sanitizeTemplate(
+            '<div><iframe src="https://www.youtube.com/embed/abc123" width="560" height="315"></iframe></div>',
+            true,
+        );
+
+        $this->assertStringContainsString('<iframe', $sanitized);
+        $this->assertStringContainsString('src="https://www.youtube.com/embed/abc123"', $sanitized);
+    }
+
+    /**
+     * Test sanitizer drops iframe tags when embedding is disabled or URL is blocked by policy.
+     *
+     * @return void
+     */
+    public function test_sanitizer_blocks_iframe_when_embedding_is_disabled_or_url_is_not_allowed(): void
+    {
+        config()->set('modules.embedded_urls.whitelist', ['https://www.youtube.com/embed/']);
+        config()->set('modules.embedded_urls.blacklist', []);
+
+        $renderer = app(ModuleRenderer::class);
+
+        $blockedByCategory = $renderer->sanitizeTemplate(
+            '<div><iframe src="https://www.youtube.com/embed/abc123"></iframe></div>',
+            false,
+        );
+        $blockedByPolicy = $renderer->sanitizeTemplate(
+            '<div><iframe src="https://example.com/embed/abc123"></iframe></div>',
+            true,
+        );
+
+        $this->assertStringNotContainsString('<iframe', strtolower($blockedByCategory));
+        $this->assertStringNotContainsString('<iframe', strtolower($blockedByPolicy));
+    }
+
+    /**
      * Test render html includes saved css and js assets.
      *
      * @return void
@@ -135,8 +197,8 @@ class ModuleRendererTest extends TestCase
             'style_checksum' => hash('sha256', 'style'),
             'script_path' => 'users/' . $author->username . '/modules/widget/module-2/v1.js',
             'script_checksum' => hash('sha256', 'script'),
-            'config_schema' => [],
-            'default_config' => [],
+            'data_schema' => [],
+            'module_data' => [],
             'data_source' => [],
         ]);
 
@@ -145,12 +207,111 @@ class ModuleRendererTest extends TestCase
         Storage::disk('public')->put($module->script_path, 'console.log("module-ready");');
 
         $html = app(ModuleRenderer::class)->renderHtml($module);
+        preg_match('/data-module-scope="([^"]+)"/', $html, $matches);
+        $scopeSelector = '[data-module-scope="' . ($matches[1] ?? '') . '"]';
 
         $this->assertStringContainsString('<style>', $html);
-        $this->assertStringContainsString('.module-title { color: red; }', $html);
+        $this->assertNotSame('', $matches[1] ?? '');
+        $this->assertStringContainsString('class="module-runtime-root"', $html);
+        $this->assertMatchesRegularExpression(
+            '/'. preg_quote($scopeSelector, '/') . '\s+\.module-title\s*\{\s*color:\s*red;\s*\}/',
+            $html,
+        );
         $this->assertStringContainsString('Decorated module', $html);
         $this->assertStringContainsString('<script>', $html);
+        $this->assertStringContainsString('const host = document.querySelector(', $html);
+        $this->assertStringContainsString('document: scopedDocument', $html);
         $this->assertStringContainsString('console.log("module-ready");', $html);
+    }
+
+    /**
+     * Test isolated runtime output keeps a full-cell iframe contract.
+     *
+     * @return void
+     */
+    public function test_render_isolated_html_uses_full_height_runtime_contract(): void
+    {
+        Storage::fake('public');
+        $this->seedCatalogData();
+        $author = $this->createAuthor();
+
+        $category = ModuleCategory::create([
+            'name' => 'widget',
+            'slug' => 'widget',
+            'is_widget' => true,
+            'is_system' => true,
+        ]);
+
+        $module = Module::create([
+            'name' => 'Runtime fill module',
+            'category' => $category->id,
+            'created_by' => $author->id,
+            'is_active' => true,
+            'revision' => 1,
+            'template_path' => 'users/' . $author->username . '/modules/widget/module-4/v1.html',
+            'template_checksum' => hash('sha256', 'template'),
+            'data_schema' => [],
+            'module_data' => [],
+            'data_source' => [],
+        ]);
+
+        Storage::disk('public')->put($module->template_path, '<section class="fill-test">{{ module.name }}</section>');
+
+        $html = app(ModuleRenderer::class)->renderIsolatedHtml($module);
+
+        $this->assertStringContainsString('class="module-runtime-frame', $html);
+        $this->assertStringContainsString('class=&quot;module-runtime-root&quot;', $html);
+        $this->assertStringContainsString('class=&quot;module-runtime-fill&quot;', $html);
+        $this->assertStringContainsString('html,body{margin:0;padding:0;width:100%;height:100%', $html);
+    }
+
+    /**
+     * Test renderer scopes global CSS selectors back to the module root.
+     *
+     * @return void
+     */
+    public function test_render_html_scopes_global_css_selectors_to_the_module_root(): void
+    {
+        Storage::fake('public');
+        $this->seedCatalogData();
+        $author = $this->createAuthor();
+
+        $category = ModuleCategory::create([
+            'name' => 'widget',
+            'slug' => 'widget',
+            'is_widget' => true,
+            'is_system' => true,
+        ]);
+
+        $module = Module::create([
+            'name' => 'Scoped styles module',
+            'category' => $category->id,
+            'created_by' => $author->id,
+            'is_active' => true,
+            'revision' => 1,
+            'template_path' => 'users/' . $author->username . '/modules/widget/module-3/v1.html',
+            'template_checksum' => hash('sha256', 'template'),
+            'style_path' => 'users/' . $author->username . '/modules/widget/module-3/v1.css',
+            'style_checksum' => hash('sha256', 'style'),
+            'data_schema' => [],
+            'module_data' => [],
+            'data_source' => [],
+        ]);
+
+        Storage::disk('public')->put($module->template_path, '<section><h3>{{ module.name }}</h3></section>');
+        Storage::disk('public')->put($module->style_path, 'body { color: red; }');
+
+        $html = app(ModuleRenderer::class)->renderHtml($module);
+        preg_match('/data-module-scope="([^"]+)"/', $html, $matches);
+        $scopeSelector = '[data-module-scope="' . ($matches[1] ?? '') . '"]';
+
+        $this->assertNotSame('', $matches[1] ?? '');
+        $this->assertStringContainsString('<style>', $html);
+        $this->assertMatchesRegularExpression(
+            '/'. preg_quote($scopeSelector, '/') . '\s*\{\s*color:\s*red;\s*\}/',
+            $html,
+        );
+        $this->assertStringNotContainsString('<style>' . PHP_EOL . 'body { color: red; }', $html);
     }
 
     /**
@@ -174,6 +335,36 @@ class ModuleRendererTest extends TestCase
 
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
         $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+    }
+
+    /**
+     * Test draft render supports object and array schema normalization.
+     *
+     * @return void
+     */
+    public function test_draft_render_supports_object_and_array_schema_types(): void
+    {
+        $html = app(ModuleRenderer::class)->renderDraftHtml(
+            templateHtml: '<section><p>{{ config.options.theme }}</p>{{#config.slides}}<span>{{ . }}</span>{{/config.slides}}</section>',
+            templateCss: '',
+            templateJs: '',
+            moduleData: ['name' => 'Complex module'],
+            source: [],
+            schema: [
+                'options' => ['type' => 'object', 'default' => ['theme' => 'light']],
+                'slides' => ['type' => 'array', 'default' => ['one', 'two']],
+            ],
+            defaults: [
+                'options' => ['theme' => 'dark'],
+                'slides' => ['alpha', 'beta'],
+            ],
+            instanceConfig: [],
+            viewer: null,
+        );
+
+        $this->assertStringContainsString('dark', $html);
+        $this->assertStringContainsString('alpha', $html);
+        $this->assertStringContainsString('beta', $html);
     }
 
     /**
@@ -217,4 +408,3 @@ class ModuleRendererTest extends TestCase
         ]);
     }
 }
-

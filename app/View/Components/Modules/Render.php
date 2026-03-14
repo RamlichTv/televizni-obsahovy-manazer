@@ -7,6 +7,12 @@ use App\Support\Modules\ModuleRenderer;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
+/**
+ * Render a saved module instance inside Blade views.
+ *
+ * This component keeps Blade call sites compact while delegating the actual
+ * template/data rendering pipeline to ModuleRenderer.
+ */
 class Render extends Component
 {
     /**
@@ -36,4 +42,3 @@ class Render extends Component
         );
     }
 }
-

@@ -10,11 +10,14 @@ use App\Models\ContentType;
 use App\Models\Module;
 use App\Models\ModuleCategory;
 use App\Models\PageModule;
+use App\Models\Tag;
 use App\Support\Modules\ModuleRenderer;
+use App\Support\Modules\Editor\ModuleEditorViewDataFactory;
 use App\Support\Modules\TailwindBuild\TailwindBuildScheduler;
 use App\Support\Modules\TailwindBuild\TailwindBuildStatus;
 use App\Support\Modules\Template\LegacyTemplateFactory;
 use App\Support\Modules\Template\ModuleTemplateStorage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +32,7 @@ use Illuminate\View\View;
  * Key behavior:
  * - Stores template assets per revision.
  * - Sanitizes template HTML before persistence/preview.
- * - Restricts JavaScript editing/preview to admin users.
+ * - Gates JavaScript editing and embedded-category usage by explicit permissions.
  */
 class ModulesController extends Controller
 {
@@ -45,6 +48,7 @@ class ModulesController extends Controller
      */
     public function __construct(
         private readonly ModuleRenderer $moduleRenderer,
+        private readonly ModuleEditorViewDataFactory $moduleEditorViewDataFactory,
         private readonly ModuleTemplateStorage $templateStorage,
         private readonly TailwindBuildStatus $tailwindBuildStatus,
         private readonly TailwindBuildScheduler $tailwindBuildScheduler,
@@ -80,7 +84,7 @@ class ModulesController extends Controller
 
         $modules = Module::query()
             ->with([
-                'moduleCategory:id,name,is_widget,is_system',
+                'moduleCategory:id,name,is_widget,allow_embedded,is_system',
                 'createdBy:id,name',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
@@ -117,7 +121,7 @@ class ModulesController extends Controller
         $categories = ModuleCategory::query()
             ->withCount('modules')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'is_widget', 'is_system']);
+            ->get(['id', 'name', 'slug', 'is_widget', 'is_screensaver', 'allow_embedded', 'is_system']);
 
         $searchSuggestions = Module::query()
             ->select('name')
@@ -151,7 +155,7 @@ class ModulesController extends Controller
     public function show(Module $module, Request $request): View
     {
         $module->loadMissing([
-            'moduleCategory:id,name,slug,is_widget,is_system',
+            'moduleCategory:id,name,slug,is_widget,allow_embedded,is_system',
             'createdBy:id,name,username',
         ]);
 
@@ -175,6 +179,7 @@ class ModulesController extends Controller
             'templateJs' => $templateJs,
             'previewHtml' => $previewHtml,
             'canEditScript' => $this->canEditScript($request),
+            ...$this->moduleEditorViewDataFactory->buildShowViewData($previewHtml),
         ]);
     }
 
@@ -186,32 +191,37 @@ class ModulesController extends Controller
      */
     public function create(Request $request): View
     {
-        $templatePresets = $this->resolvedTemplatePresets();
-        $defaultPreset = is_array($templatePresets['generic'] ?? null) ? $templatePresets['generic'] : null;
+        $templatePresets = $this->resolvedTemplatePresets($this->canEditScript($request));
 
-        // Provide safe defaults so the create form always starts in valid state.
+        // Start new modules with empty template editors so authors begin from a
+        // blank canvas instead of inheriting a preset automatically.
         $module = new Module([
             'is_active' => true,
             'revision' => 1,
-            'config_schema' => [],
-            'default_config' => [],
+            'data_schema' => [],
+            'module_data' => [],
             'data_source' => [],
         ]);
 
         return view('services.modules.create', [
             'module' => $module,
-            'categories' => $this->moduleCategories(),
+            'categories' => $this->editorModuleCategories($request),
             'providers' => $this->availableProviders(),
-            'templateHtml' => old('template_html', (string) ($defaultPreset['template_html'] ?? '')),
-            'templateCss' => old('template_css', (string) ($defaultPreset['template_css'] ?? '')),
-            'templateJs' => old('template_js', (string) ($defaultPreset['template_js'] ?? '')),
-            'previewHtml' => old('draft_preview_html', ''),
-            'availableRevisions' => [1],
-            'selectedRevision' => 1,
-            'contentTypes' => $this->contentTypeNames(),
-            'contentStatuses' => $this->contentStatusNames(),
-            'templatePresets' => $templatePresets,
-            'canEditScript' => $this->canEditScript($request),
+            'editorViewData' => $this->moduleEditorViewDataFactory->buildFormViewData($module, [
+                'templateHtml' => '',
+                'templateCss' => '',
+                'templateJs' => '',
+                'previewHtml' => '',
+                'availableRevisions' => [1],
+                'selectedRevision' => 1,
+                'contentTypes' => $this->contentTypeNames(),
+                'contentStatuses' => $this->contentStatusNames(),
+                'contentTags' => $this->contentTags(),
+                'templatePresets' => $templatePresets,
+                'canEditScript' => $this->canEditScript($request),
+                'canBypassSanitizer' => $this->canBypassTemplateSanitization($request),
+                'embeddedAccessLocked' => false,
+            ]),
         ]);
     }
 
@@ -228,7 +238,11 @@ class ModulesController extends Controller
         $payload = $this->buildModulePayload($validated);
 
         // Sanitize HTML and gate JavaScript by role before any write operations.
-        $templateHtml = $this->moduleRenderer->sanitizeTemplate((string) $validated['template_html']);
+        $templateHtml = $this->resolveTemplateHtml(
+            request: $request,
+            templateHtml: (string) $validated['template_html'],
+            allowEmbedded: (bool) ($category->allow_embedded ?? false),
+        );
         $templateCss = (string) ($validated['template_css'] ?? '');
         $templateJs = $this->canEditScript($request)
             ? (string) ($validated['template_js'] ?? '')
@@ -236,8 +250,8 @@ class ModulesController extends Controller
 
         $module = Module::query()->create([
             'name' => (string) $validated['name'],
-            'config_schema' => $payload['config_schema'],
-            'default_config' => $payload['default_config'],
+            'data_schema' => $payload['data_schema'],
+            'module_data' => $payload['module_data'],
             'data_source' => $payload['data_source'],
             'is_active' => (bool) ($validated['is_active'] ?? true),
             'revision' => 1,
@@ -286,9 +300,10 @@ class ModulesController extends Controller
     public function edit(Module $module, Request $request): View
     {
         $module->loadMissing([
-            'moduleCategory:id,name,slug,is_widget,is_system',
+            'moduleCategory:id,name,slug,is_widget,allow_embedded,is_system',
             'createdBy:id,name,username',
         ]);
+        $embeddedAccessLocked = $this->embeddedAccessLocked($request, $module->moduleCategory);
 
         [$selectedRevision, $availableRevisions] = $this->resolveRevisionContext($module, $request);
         [$templateHtml, $templateCss, $templateJs] = $this->readRevisionAssets($module, $selectedRevision);
@@ -303,18 +318,23 @@ class ModulesController extends Controller
 
         return view('services.modules.edit', [
             'module' => $module,
-            'categories' => $this->moduleCategories(),
+            'categories' => $this->editorModuleCategories($request, $module),
             'providers' => $this->availableProviders(),
-            'templateHtml' => $templateHtml,
-            'templateCss' => $templateCss,
-            'templateJs' => $templateJs,
-            'previewHtml' => $previewHtml,
-            'availableRevisions' => $availableRevisions,
-            'selectedRevision' => $selectedRevision,
-            'contentTypes' => $this->contentTypeNames(),
-            'contentStatuses' => $this->contentStatusNames(),
-            'templatePresets' => $this->resolvedTemplatePresets(),
-            'canEditScript' => $this->canEditScript($request),
+            'editorViewData' => $this->moduleEditorViewDataFactory->buildFormViewData($module, [
+                'templateHtml' => $templateHtml,
+                'templateCss' => $templateCss,
+                'templateJs' => $templateJs,
+                'previewHtml' => $previewHtml,
+                'availableRevisions' => $availableRevisions,
+                'selectedRevision' => $selectedRevision,
+                'contentTypes' => $this->contentTypeNames(),
+                'contentStatuses' => $this->contentStatusNames(),
+                'contentTags' => $this->contentTags(),
+                'templatePresets' => $this->resolvedTemplatePresets($this->canEditScript($request)),
+                'canEditScript' => $this->canEditScript($request),
+                'canBypassSanitizer' => $this->canBypassTemplateSanitization($request),
+                'embeddedAccessLocked' => $embeddedAccessLocked,
+            ]),
         ]);
     }
 
@@ -322,16 +342,21 @@ class ModulesController extends Controller
      * Render a draft preview from form values.
      *
      * @param ModulePreviewRequest $request
-     * @return RedirectResponse
+     * @return JsonResponse|RedirectResponse
      */
-    public function preview(ModulePreviewRequest $request): RedirectResponse
+    public function preview(ModulePreviewRequest $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validated();
         $payload = $this->buildModulePayload($validated);
         $category = ModuleCategory::query()->find((int) $validated['category']);
+        $previewError = '';
 
         // Preview reuses the same sanitization and script access policy as store/update.
-        $templateHtml = $this->moduleRenderer->sanitizeTemplate((string) $validated['template_html']);
+        $templateHtml = $this->resolveTemplateHtml(
+            request: $request,
+            templateHtml: (string) $validated['template_html'],
+            allowEmbedded: (bool) ($category?->allow_embedded ?? false),
+        );
         $templateCss = (string) ($validated['template_css'] ?? '');
         $templateJs = $this->canEditScript($request)
             ? (string) ($validated['template_js'] ?? '')
@@ -353,16 +378,15 @@ class ModulesController extends Controller
                 templateJs: $templateJs,
                 moduleData: $moduleData,
                 source: $payload['data_source'],
-                schema: $payload['config_schema'],
-                defaults: $payload['default_config'],
+                schema: $payload['data_schema'],
+                defaults: $payload['module_data'],
                 instanceConfig: [],
                 viewer: $request->user(),
             );
         } catch (Throwable $exception) {
             // Keep user on form with explicit render error instead of failing the request.
-            $previewHtml = '<div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">'
-                . e(__('Preview failed: :message', ['message' => $exception->getMessage()]))
-                . '</div>';
+            $previewHtml = '';
+            $previewError = (string) __('Preview failed: :message', ['message' => $exception->getMessage()]);
         }
 
         $moduleId = $validated['module_id'] ?? null;
@@ -371,10 +395,20 @@ class ModulesController extends Controller
             ? redirect()->route('module.edit', ['module' => $module])
             : redirect()->route('module.create');
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'preview_html' => $previewHtml,
+                'preview_error' => $previewError,
+            ]);
+        }
+
         return $redirect
             ->withInput(array_merge(
                 $request->except(['_token']),
-                ['draft_preview_html' => $previewHtml],
+                [
+                    'draft_preview_html' => $previewHtml,
+                    'draft_preview_error' => $previewError,
+                ],
             ));
     }
 
@@ -392,7 +426,11 @@ class ModulesController extends Controller
         $payload = $this->buildModulePayload($validated);
 
         // Apply same sanitization pipeline as create/preview.
-        $templateHtml = $this->moduleRenderer->sanitizeTemplate((string) $validated['template_html']);
+        $templateHtml = $this->resolveTemplateHtml(
+            request: $request,
+            templateHtml: (string) $validated['template_html'],
+            allowEmbedded: (bool) ($category->allow_embedded ?? false),
+        );
         $templateCss = (string) ($validated['template_css'] ?? '');
         $templateJs = $this->canEditScript($request)
             ? (string) ($validated['template_js'] ?? '')
@@ -418,8 +456,8 @@ class ModulesController extends Controller
 
         $module->update(array_merge($assetPaths, [
             'name' => (string) $validated['name'],
-            'config_schema' => $payload['config_schema'],
-            'default_config' => $payload['default_config'],
+            'data_schema' => $payload['data_schema'],
+            'module_data' => $payload['module_data'],
             'data_source' => $payload['data_source'],
             'is_active' => (bool) ($validated['is_active'] ?? false),
             'revision' => $nextRevision,
@@ -496,55 +534,13 @@ class ModulesController extends Controller
      */
     private function buildModulePayload(array $validated): array
     {
-        $configSchema = is_array($validated['config_schema'] ?? null) ? $validated['config_schema'] : [];
-        $defaultConfig = is_array($validated['default_config'] ?? null) ? $validated['default_config'] : [];
+        $dataSchema = is_array($validated['data_schema'] ?? null) ? $validated['data_schema'] : [];
+        $moduleData = is_array($validated['module_data'] ?? null) ? $validated['module_data'] : [];
         $dataSource = is_array($validated['data_source'] ?? null) ? $validated['data_source'] : [];
 
-        $title = trim((string) ($validated['settings_title'] ?? ''));
-        if ($title !== '') {
-            $defaultConfig['title'] = $title;
-            $titleDefinition = is_array($configSchema['title'] ?? null) ? $configSchema['title'] : [];
-            $titleDefinition['type'] = $titleDefinition['type'] ?? 'string';
-            $titleDefinition['default'] = $title;
-            $configSchema['title'] = $titleDefinition;
-        }
-
-        $provider = trim((string) ($validated['settings_provider'] ?? (string) ($dataSource['provider'] ?? '')));
-        if ($provider === '') {
-            $provider = 'content_objects';
-        }
-        $dataSource['provider'] = $provider;
-
-        $filters = is_array($dataSource['filters'] ?? null) ? $dataSource['filters'] : [];
-        $typeName = trim((string) ($validated['settings_type_name'] ?? ''));
-        $statusName = trim((string) ($validated['settings_status_name'] ?? ''));
-
-        if ($typeName === '') {
-            unset($filters['type_name']);
-        } else {
-            $filters['type_name'] = $typeName;
-        }
-
-        if ($statusName === '') {
-            unset($filters['status_name']);
-        } else {
-            $filters['status_name'] = $statusName;
-        }
-
-        $dataSource['filters'] = $filters;
-        $dataSource['order_by'] = (string) ($validated['settings_order_by'] ?? ($dataSource['order_by'] ?? 'published_at'));
-        $dataSource['order_direction'] = strtolower((string) ($validated['settings_order_direction'] ?? ($dataSource['order_direction'] ?? 'desc'))) === 'asc'
-            ? 'asc'
-            : 'desc';
-
-        $settingsLimit = isset($validated['settings_limit']) ? (int) $validated['settings_limit'] : null;
-        $sourceLimit = isset($dataSource['limit']) ? (int) $dataSource['limit'] : null;
-        $maxLimit = max(1, (int) config('modules.max_items_per_module', 30));
-        $dataSource['limit'] = max(1, min($maxLimit, $settingsLimit ?? $sourceLimit ?? 8));
-
         return [
-            'config_schema' => $configSchema,
-            'default_config' => $defaultConfig,
+            'data_schema' => $dataSchema,
+            'module_data' => $moduleData,
             'data_source' => $dataSource,
         ];
     }
@@ -644,8 +640,8 @@ class ModulesController extends Controller
                     'revision' => $selectedRevision,
                 ],
                 source: is_array($module->data_source) ? $module->data_source : [],
-                schema: is_array($module->config_schema) ? $module->config_schema : [],
-                defaults: is_array($module->default_config) ? $module->default_config : [],
+                schema: is_array($module->data_schema) ? $module->data_schema : [],
+                defaults: is_array($module->module_data) ? $module->module_data : [],
                 instanceConfig: [],
                 viewer: $user,
             );
@@ -665,7 +661,7 @@ class ModulesController extends Controller
     {
         return ModuleCategory::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'is_widget', 'is_system']);
+            ->get(['id', 'name', 'slug', 'is_widget', 'is_screensaver', 'allow_embedded', 'is_system']);
     }
 
     /**
@@ -706,6 +702,24 @@ class ModulesController extends Controller
     }
 
     /**
+     * Return content tags for module filters.
+     *
+     * @return array<int, array{id:int,name:string}>
+     */
+    private function contentTags(): array
+    {
+        return Tag::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(static fn (Tag $tag): array => [
+                'id' => (int) $tag->id,
+                'name' => (string) $tag->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Return content status names for module filters.
      *
      * @return array
@@ -713,6 +727,7 @@ class ModulesController extends Controller
     private function contentStatusNames(): array
     {
         return ContentStatus::query()
+            ->where('name', '!=', 'Deleted')
             ->orderBy('name')
             ->pluck('name')
             ->values()
@@ -720,31 +735,76 @@ class ModulesController extends Controller
     }
 
     /**
+     * Determine whether the current user may bypass HTML sanitization.
+     *
+     * @param Request $request
+     * @return bool
+     */
+    private function canBypassTemplateSanitization(Request $request): bool
+    {
+        return (bool) ($request->user()?->isAdmin());
+    }
+
+    /**
+     * Resolve template HTML for save/preview with optional admin bypass.
+     *
+     * @param Request $request
+     * @param string $templateHtml
+     * @param bool $allowEmbedded
+     * @return string
+     */
+    private function resolveTemplateHtml(Request $request, string $templateHtml, bool $allowEmbedded = false): string
+    {
+        if ($this->canBypassTemplateSanitization($request)) {
+            return $templateHtml;
+        }
+
+        return $this->moduleRenderer->sanitizeTemplate($templateHtml, $allowEmbedded);
+    }
+
+    /**
      * Resolve the template presets shown in module create/edit.
      *
+     * @param bool $includeScriptTemplates
      * @return array
      */
-    private function resolvedTemplatePresets(): array
+    private function resolvedTemplatePresets(bool $includeScriptTemplates = true): array
     {
         $configured = (array) config('modules.template_presets', []);
         $legacy = $this->legacyTemplateFactory->presets();
 
         if ($configured === []) {
-            return $legacy;
+            $configured = $legacy;
         }
 
-        foreach ($legacy as $key => $preset) {
-            if (!array_key_exists($key, $configured)) {
-                $configured[$key] = $preset;
+        if ($configured !== $legacy) {
+            foreach ($legacy as $key => $preset) {
+                if (!array_key_exists($key, $configured)) {
+                    $configured[$key] = $preset;
+                }
             }
         }
 
-        return array_filter(
+        $presets = array_filter(
             $configured,
             static fn ($preset): bool => is_array($preset)
                 && is_string($preset['label'] ?? null)
                 && is_string($preset['template_html'] ?? null),
         );
+
+        if ($includeScriptTemplates) {
+            return $presets;
+        }
+
+        return array_map(static function ($preset): array {
+            if (!is_array($preset)) {
+                return [];
+            }
+
+            unset($preset['template_js']);
+
+            return $preset;
+        }, $presets);
     }
 
     /**
@@ -803,6 +863,63 @@ class ModulesController extends Controller
      */
     private function canEditScript(Request $request): bool
     {
-        return (bool) ($request->user()?->isAdmin());
+        return (bool) ($request->user()?->can('manage_module_javascript'));
+    }
+
+    /**
+     * Determine whether the current user may use embedded-capable categories.
+     *
+     * @param Request $request
+     * @return bool
+     */
+    private function canManageEmbeddedModules(Request $request): bool
+    {
+        return (bool) ($request->user()?->can('manage_embedded_modules'));
+    }
+
+    /**
+     * Return categories shown in the module editor.
+     *
+     * Editors without embedded-module permission should not be able to select
+     * embedded-capable categories. When editing an already embedded module, keep
+     * the current category visible so the read-only state has context.
+     *
+     * @param Request $request
+     * @param Module|null $module
+     * @return \Illuminate\Support\Collection
+     */
+    private function editorModuleCategories(Request $request, ?Module $module = null)
+    {
+        $currentCategoryId = (int) ($module?->category ?? 0);
+
+        return ModuleCategory::query()
+            ->when(
+                !$this->canManageEmbeddedModules($request),
+                function (Builder $query) use ($currentCategoryId): void {
+                    $query->where(function (Builder $nested) use ($currentCategoryId): void {
+                        $nested->where('allow_embedded', false);
+
+                        if ($currentCategoryId > 0) {
+                            $nested->orWhere('id', $currentCategoryId);
+                        }
+                    });
+                }
+            )
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'is_widget', 'is_screensaver', 'allow_embedded', 'is_system']);
+    }
+
+    /**
+     * Determine whether the current editor session must become read-only because
+     * the module already belongs to an embedded-capable category.
+     *
+     * @param Request $request
+     * @param ModuleCategory|null $category
+     * @return bool
+     */
+    private function embeddedAccessLocked(Request $request, ?ModuleCategory $category): bool
+    {
+        return (bool) ($category?->allow_embedded)
+            && !$this->canManageEmbeddedModules($request);
     }
 }

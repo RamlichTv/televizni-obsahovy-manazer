@@ -37,7 +37,15 @@
                                         <button type="button" class="text-xs text-blue-600 hover:underline" @click="editBuilding = {{ $building->id }}">
                                             {{ __('Edit') }}
                                         </button>
-                                        <form method="POST" action="{{ route('building.destroy', ['building' => $building]) }}" onsubmit="return confirm('{{ __('Delete this building?') }}');">
+                                        <form
+                                            method="POST"
+                                            action="{{ route('building.destroy', ['building' => $building]) }}"
+                                            data-confirm-title="{{ __('Delete building') }}"
+                                            data-confirm-message="{{ __('Delete the building :name?', ['name' => $building->name]) }}"
+                                            data-confirm-label="{{ __('Delete') }}"
+                                            data-cancel-label="{{ __('Cancel') }}"
+                                            data-confirm-variant="danger"
+                                        >
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-xs text-red-600 hover:underline">{{ __('Delete') }}</button>
@@ -119,7 +127,15 @@
                                     <button type="button" class="text-xs text-blue-600 hover:underline" @click="editFloor = {{ $floor->id }}">
                                         {{ __('Edit') }}
                                     </button>
-                                    <form method="POST" action="{{ route('floor.destroy', ['floor' => $floor]) }}" onsubmit="return confirm('{{ __('Delete this floor?') }}');">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('floor.destroy', ['floor' => $floor]) }}"
+                                        data-confirm-title="{{ __('Delete floor') }}"
+                                        data-confirm-message="{{ __('Delete the floor :name?', ['name' => $floor->name]) }}"
+                                        data-confirm-label="{{ __('Delete') }}"
+                                        data-cancel-label="{{ __('Cancel') }}"
+                                        data-confirm-variant="danger"
+                                    >
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-xs text-red-600 hover:underline">{{ __('Delete') }}</button>
@@ -214,7 +230,15 @@
                                     <button type="button" class="text-xs text-blue-600 hover:underline" @click="editRoom = {{ $room->id }}">
                                         {{ __('Edit') }}
                                     </button>
-                                    <form method="POST" action="{{ route('room.destroy', ['room' => $room]) }}" onsubmit="return confirm('{{ __('Delete this room?') }}');">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('room.destroy', ['room' => $room]) }}"
+                                        data-confirm-title="{{ __('Delete room') }}"
+                                        data-confirm-message="{{ __('Delete the room :name?', ['name' => $room->name]) }}"
+                                        data-confirm-label="{{ __('Delete') }}"
+                                        data-cancel-label="{{ __('Cancel') }}"
+                                        data-confirm-variant="danger"
+                                    >
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-xs text-red-600 hover:underline">{{ __('Delete') }}</button>

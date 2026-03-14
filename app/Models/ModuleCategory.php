@@ -11,11 +11,15 @@ class ModuleCategory extends Model
         'name',
         'slug',
         'is_widget',
+        'is_screensaver',
+        'allow_embedded',
         'is_system',
     ];
 
     protected $casts = [
         'is_widget' => 'boolean',
+        'is_screensaver' => 'boolean',
+        'allow_embedded' => 'boolean',
         'is_system' => 'boolean',
     ];
 
@@ -29,4 +33,3 @@ class ModuleCategory extends Model
         return $this->hasMany(Module::class, 'category');
     }
 }
-

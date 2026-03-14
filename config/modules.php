@@ -101,6 +101,8 @@ return [
     ],
 
     'allowed_attributes' => [
+        'allow',
+        'allowfullscreen',
         'alt',
         'aria-*',
         'class',
@@ -112,10 +114,13 @@ return [
         'd',
         'fill',
         'stroke*',
+        'frameborder',
         'height',
         'href',
         'id',
+        'loading',
         'r',
+        'referrerpolicy',
         'rel',
         'role',
         'rowspan',
@@ -138,5 +143,30 @@ return [
         'script',
         'style',
         'textarea',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Embedded Content URL Policy
+    |--------------------------------------------------------------------------
+    |
+    | `allow_embedded` on module categories enables iframe tags, but sources
+    | are still checked here:
+    | - blacklist always wins.
+    | - whitelist is optional; when provided, iframe sources must match it.
+    |
+    | Supported rule formats:
+    | - host: "youtube.com"
+    | - wildcard host: "*.youtube.com"
+    | - URL prefix: "https://www.youtube.com/embed/"
+    | - regex: "regex:/^https:\\/\\/player\\.vimeo\\.com\\//i"
+    |
+    */
+    'embedded_urls' => [
+        'whitelist' => [
+            'https://www.youtube.com/embed/',
+            'https://player.vimeo.com/',
+        ],
+        'blacklist' => [],
     ],
 ];

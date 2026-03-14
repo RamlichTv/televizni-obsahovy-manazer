@@ -31,6 +31,8 @@ class CreateLayoutTables extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->boolean('is_widget')->default(false);
+            $table->boolean('is_screensaver')->default(false);
+            $table->boolean('allow_embedded')->default(false);
             $table->boolean('is_system')->default(false);
             $table->timestamps();
         });
@@ -40,8 +42,8 @@ class CreateLayoutTables extends Migration
         Schema::create('modules', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');
-            $table->json('config_schema')->nullable();
-            $table->json('default_config')->nullable();
+            $table->json('data_schema')->nullable();
+            $table->json('module_data')->nullable();
             $table->json('data_source')->nullable();
             $table->boolean('is_active')->default(true);
             $table->unsignedInteger('revision')->default(1);

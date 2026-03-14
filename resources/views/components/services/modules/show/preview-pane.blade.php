@@ -1,74 +1,74 @@
 {{--
-    Rendered output panel for module show view.
+    Preview-first pane for the read-only module shell.
+    The canvas shares the same iframe isolation contract as the editor preview.
 --}}
 
 @props([
     'module',
-    'previewHtml' => '',
-    'availableRevisions' => [],
-    'selectedRevision' => null,
 ])
 
-<div class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6 space-y-5">
-    <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-5">
-        
-        {{-- Preview heading, revision switch, and sidebar toggle --}}
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-sm font-semibold text-gray-900">{{ __('Rendered Output') }}</h2>
+<section class="min-h-0 min-w-0 flex-1 bg-gray-100" :style="previewPaneStyle()">
+    <div class="flex h-full min-h-0 flex-col overflow-hidden">
+        <div class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">{{ __('Preview Canvas') }}</p>
+                    <h2 class="mt-1 text-lg font-semibold text-gray-900">{{ __('Rendered module output') }}</h2>
+                    <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                        {{ __('This isolated surface mirrors how the saved module renders inside runtime cells without leaking styles or scripts into the shell.') }}
+                    </p>
+                </div>
 
-            <div class="flex flex-wrap items-center gap-2">
-                @if (count($availableRevisions) > 1)
-                    <select
-                        class="rounded-md border-gray-300 text-xs shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]"
-                        onchange="window.location.href = this.value"
-                    >
-                        @foreach ($availableRevisions as $revisionOption)
-                            <option
-                                value="{{ route('module.show', ['module' => $module, 'revision' => $revisionOption]) }}"
-                                @selected((int) $selectedRevision === (int) $revisionOption)
-                            >
-                                {{ __('Revision') }} {{ $revisionOption }}
-                            </option>
-                        @endforeach
-                    </select>
+                <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+                    <span class="rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm">
+                        {{ __('UUID') }}: {{ $module->id }}
+                    </span>
+                    <span class="rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm">
+                        {{ __('Owner') }}: {{ $module->createdBy?->name ?? __('System') }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @if ($errors->has('module'))
+                    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {{ $errors->first('module') }}
+                    </div>
                 @endif
-
-                <button
-                    type="button"
-                    @click="sidebarOpen = !sidebarOpen"
-                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                    <span x-text="sidebarOpen ? '{{ __('Hide Sidebar') }}' : '{{ __('Show Sidebar') }}'"></span>
-                </button>
             </div>
         </div>
 
-        {{-- Module badges --}}
-        <div class="mt-3 flex flex-wrap gap-2 text-xs">
-            @if ($module->moduleCategory)
-                <span class="rounded bg-gray-100 px-2 py-1 text-gray-700">
-                    {{ ucfirst($module->moduleCategory->name) }}
-                </span>
-                @if ($module->moduleCategory->is_widget)
-                    <span class="rounded bg-sky-100 px-2 py-1 text-sky-800">{{ __('Widget') }}</span>
-                @endif
-            @endif
-            <span class="rounded px-2 py-1 {{ $module->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' }}">
-                {{ $module->is_active ? __('Active') : __('Inactive') }}
-            </span>
-        </div>
+        <div class="module-editor-checkerboard min-h-0 flex-1 overflow-hidden p-4 sm:p-5 lg:p-6">
+            <div class="flex h-full min-h-0 items-stretch">
+                <div class="module-editor-surface relative flex h-full min-h-0 w-full min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <iframe
+                        x-show="hasPreviewHtml(previewHtml)"
+                        x-cloak
+                        title="{{ __('Module Preview') }}"
+                        class="block h-full min-h-full w-full min-w-0 border-0 bg-white"
+                        :srcdoc="previewDocumentHtml(previewHtml)"
+                    ></iframe>
 
-        {{-- Rendered module output (or fallback empty state) --}}
-        <div class="m-4 min-h-[58vh] grid rounded-lg border border-gray-200 bg-white p-5 overflow-auto">
-            @if (is_string($previewHtml) && trim($previewHtml) !== '')
-                {!! $previewHtml !!}
-            @else
-                <div class="grid min-h-[52vh] place-items-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
-                    <p class="px-4 text-center text-sm text-gray-500">
-                        {{ __('No rendered output available.') }}
-                    </p>
+                    <div
+                        x-show="!hasPreviewHtml(previewHtml)"
+                        x-cloak
+                        class="grid h-full min-h-full w-full place-items-center px-6 py-10"
+                    >
+                        <div class="max-w-md text-center">
+                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 text-gray-500 shadow-inner">
+                                <svg viewBox="0 0 24 24" fill="none" class="h-7 w-7" aria-hidden="true">
+                                    <path d="M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.5"></path>
+                                    <path d="M9 9h6M9 12h6M9 15h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                                </svg>
+                            </div>
+                            <p class="mt-5 text-xl font-semibold text-gray-900">{{ __('No rendered output available yet.') }}</p>
+                            <p class="mt-2 text-sm leading-6 text-gray-500">
+                                {{ __('Once this module has renderable content, it will appear here inside the isolated preview canvas.') }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
-            @endif
+            </div>
         </div>
     </div>
-</div>
+</section>

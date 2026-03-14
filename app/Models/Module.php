@@ -17,8 +17,8 @@ class Module extends Model
 
     protected $fillable = [
         'name',
-        'config_schema',
-        'default_config',
+        'data_schema',
+        'module_data',
         'data_source',
         'is_active',
         'revision',
@@ -33,8 +33,8 @@ class Module extends Model
     ];
 
     protected $casts = [
-        'config_schema' => 'array',
-        'default_config' => 'array',
+        'data_schema' => 'array',
+        'module_data' => 'array',
         'data_source' => 'array',
         'is_active' => 'boolean',
         'revision' => 'integer',
@@ -89,5 +89,16 @@ class Module extends Model
     {
         return $this->belongsToMany(ModuleCategory::class, 'module_categories');
     }
-}
 
+    /**
+     * Screens this module is used as a screensaver on.
+     *
+     * @return BelongsToMany
+     */
+    public function screensaverScreens(): BelongsToMany
+    {
+        return $this->belongsToMany(Screen::class, 'screen_screensaver_modules', 'module_id', 'screen_id')
+            ->withPivot('order')
+            ->withTimestamps();
+    }
+}

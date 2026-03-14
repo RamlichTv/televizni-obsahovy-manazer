@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Screen management feature tests.
+ *
+ * These assertions cover both the screen CRUD flows and the location-manager
+ * redirect flags relied on by the shared modal refresh.
+ */
+
 namespace Tests\Feature\Screens;
 
 use App\Models\Module;
@@ -82,6 +89,30 @@ class ScreenRequestTest extends TestCase
             'screen_id' => $screen->id,
             'module_id' => $module->id,
         ]);
+    }
+
+    /**
+     * Test building creation keeps the location manager modal open on redirect.
+     *
+     * @return void
+     */
+    public function test_building_creation_keeps_the_location_manager_open(): void
+    {
+        $user = $this->createAdministrator();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('screens.index'))
+            ->post(route('building.store'), [
+                'building_name' => 'HQ',
+                'address' => 'Main street 1',
+            ]);
+
+        $response
+            ->assertRedirect(route('screens.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('location_manager_open', true)
+            ->assertSessionHas('success', __('Building created successfully.'));
     }
 
     /**

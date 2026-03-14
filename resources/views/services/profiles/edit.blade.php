@@ -57,34 +57,21 @@
                 'pageUpdated' => __('Page updated.'),
                 'requestFailed' => __('Request failed.'),
                 'uncategorized' => __('Uncategorized'),
+                'deletePageTitle' => __('Delete Page'),
+                'removeModuleTitle' => __('Remove Module'),
+                'deleteAction' => __('Delete'),
+                'cancelAction' => __('Cancel'),
             ]),
         })"
         x-init="init()"
     >
         <div class="mx-auto max-w-384 space-y-4">
-            {{-- Backend success flash after full-page form submissions. --}}
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             {{-- Backend validation summary for the settings form below. --}}
             @if ($errors->any())
                 <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     {{ $errors->first() }}
                 </div>
             @endif
-
-            {{-- Live Alpine feedback for in-canvas actions (drag/drop, resize, async saves). --}}
-            <div
-                class="rounded-md border p-3 text-sm"
-                :class="flash.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'"
-                x-show="flash.message"
-                x-cloak
-            >
-                <span x-text="flash.message"></span>
-            </div>
 
             {{-- Visual page builder with drag/drop, sizing, and module placement controls. --}}
             <x-services.profiles.layout-editor />

@@ -421,7 +421,7 @@ class ProfilesController extends Controller
         }
 
         try {
-            return $this->moduleRenderer->renderHtml(
+            return $this->moduleRenderer->renderIsolatedHtml(
                 module: $module,
                 instanceConfig: $config,
                 viewer: $viewer,

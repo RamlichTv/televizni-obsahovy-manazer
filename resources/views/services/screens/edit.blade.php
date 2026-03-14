@@ -1,3 +1,8 @@
+{{--
+    Screen edit page.
+    It keeps screen-specific validation inline while routing destructive confirmation through the shared modal system.
+--}}
+
 <x-app-layout title="{{ $screen->name }}">
     <x-slot name="screensNavTitle">
         {{ __('Edit') }}
@@ -23,12 +28,6 @@
 
     <section class="py-8 px-4">
         <div class="mx-auto max-w-7xl space-y-4">
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             @if ($errors->any())
                 <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     {{ $errors->first() }}
@@ -46,7 +45,16 @@
             <div class="rounded-xl border border-red-200 bg-red-50 p-4">
                 <p class="text-sm font-semibold text-red-700">{{ __('Danger Zone') }}</p>
                 <p class="mt-1 text-xs text-red-700">{{ __('Deleting a screen removes the TV endpoint record. This does not delete its profile.') }}</p>
-                <form method="POST" action="{{ route('screen.destroy', ['screen' => $screen]) }}" class="mt-3" onsubmit="return confirm('{{ __('Delete this screen?') }}');">
+                <form
+                    method="POST"
+                    action="{{ route('screen.destroy', ['screen' => $screen]) }}"
+                    class="mt-3"
+                    data-confirm-title="{{ __('Delete screen') }}"
+                    data-confirm-message="{{ __('Delete the screen :name?', ['name' => $screen->name]) }}"
+                    data-confirm-label="{{ __('Delete Screen') }}"
+                    data-cancel-label="{{ __('Cancel') }}"
+                    data-confirm-variant="danger"
+                >
                     @csrf
                     @method('DELETE')
                     <x-danger-button>{{ __('Delete Screen') }}</x-danger-button>

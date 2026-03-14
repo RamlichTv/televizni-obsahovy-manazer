@@ -1,117 +1,83 @@
 @php
-    /** @var \App\Models\Module $module */
-    // Resolve editor mode and normalize persisted JSON fields into arrays for safe binding.
-    $isEdit = $module->exists;
-
-    $schemaValue = old('config_schema', $module->config_schema ?? []);
-    $defaultConfigValue = old('default_config', $module->default_config ?? []);
-    $dataSourceValue = old('data_source', $module->data_source ?? []);
-
-    $schemaArray = is_array($schemaValue) ? $schemaValue : (json_decode((string) $schemaValue, true) ?: []);
-    $defaultConfigArray = is_array($defaultConfigValue) ? $defaultConfigValue : (json_decode((string) $defaultConfigValue, true) ?: []);
-    $dataSourceArray = is_array($dataSourceValue) ? $dataSourceValue : (json_decode((string) $dataSourceValue, true) ?: []);
-
-    // Keep JSON snapshots for hidden payload fields and read-only JSON display.
-    $schemaJson = json_encode($schemaArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
-    $defaultConfigJson = json_encode($defaultConfigArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
-    $dataSourceJson = json_encode($dataSourceArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
-
-    // Resolve editor textareas and preview content from old() first, then persisted values.
-    $resolvedTemplateHtml = old('template_html', $templateHtml ?? '');
-    $resolvedTemplateCss = old('template_css', $templateCss ?? '');
-    $resolvedTemplateJs = old('template_js', $templateJs ?? '');
-    $resolvedPreviewHtml = old('draft_preview_html', $previewHtml ?? '');
-    $resolvedCanEditScript = (bool) ($canEditScript ?? false);
-    $resolvedAvailableRevisions = array_values(array_filter(
-        array_map('intval', (array) ($availableRevisions ?? [])),
-        static fn (int $revision): bool => $revision > 0,
-    ));
-    $resolvedSelectedRevision = (int) ($selectedRevision ?? ($module->revision ?? 1));
-
-    // Option lists used by the settings UI.
-    $contentTypeOptions = array_values(array_filter(array_map(
-        static fn ($name): string => is_string($name) ? trim($name) : '',
-        (array) ($contentTypes ?? []),
-    )));
-
-    $contentStatusOptions = array_values(array_filter(array_map(
-        static fn ($name): string => is_string($name) ? trim($name) : '',
-        (array) ($contentStatuses ?? []),
-    )));
-
-    $settingsModuleTitle = (string) data_get($defaultConfigArray, 'title', data_get($schemaArray, 'title.default', 'My Module'));
-    $settingsProvider = (string) data_get($dataSourceArray, 'provider', 'content_objects');
-    $settingsTypeName = (string) data_get($dataSourceArray, 'filters.type_name', '');
-    $settingsStatusName = (string) data_get($dataSourceArray, 'filters.status_name', 'Published');
-    $settingsOrderBy = (string) data_get($dataSourceArray, 'order_by', 'published_at');
-    $settingsOrderDirection = (string) data_get($dataSourceArray, 'order_direction', 'desc');
-    $settingsLimit = max(1, (int) data_get($dataSourceArray, 'limit', 8));
-
-    // Keep only valid presets so Alpine never receives malformed entries.
-    $resolvedTemplatePresets = array_filter(
-        (array) ($templatePresets ?? []),
-        static fn ($preset): bool => is_array($preset)
-            && is_string($preset['label'] ?? null)
-            && is_string($preset['template_html'] ?? null),
-    );
-
-    /**
-     * Initial state consumed by `moduleFormEditor()` in resources/js/services/modules/form-editor.js.
-     *
-     * @var array{
-     *   settings: array{
-     *     title: string,
-     *     provider: string,
-     *     typeName: string,
-     *     statusName: string,
-     *     orderBy: string,
-     *     orderDirection: string,
-     *     limit: int
-     *   },
-     *   templatePresets: array<string, mixed>,
-     *   baseConfigSchema: array<string, mixed>,
-     *   baseDefaultConfig: array<string, mixed>,
-     *   baseDataSource: array<string, mixed>
-     * } $moduleFormInitialState
-     */
-    $moduleFormInitialState = [
-        'settings' => [
-            'title' => $settingsModuleTitle,
-            'provider' => $settingsProvider,
-            'typeName' => $settingsTypeName,
-            'statusName' => $settingsStatusName,
-            'orderBy' => $settingsOrderBy,
-            'orderDirection' => $settingsOrderDirection,
-            'limit' => $settingsLimit,
-        ],
-        'templatePresets' => $resolvedTemplatePresets,
-        'baseConfigSchema' => $schemaArray,
-        'baseDefaultConfig' => $defaultConfigArray,
-        'baseDataSource' => $dataSourceArray,
-    ];
+    /** @var array<string, mixed> $editorViewData */
+    $flags = $editorViewData['flags'];
+    $templates = $editorViewData['templates'];
+    $preview = $editorViewData['preview'];
+    $jsonPayloads = $editorViewData['jsonPayloads'];
+    $rawJson = $editorViewData['rawJson'];
+    $settingsUi = $editorViewData['settingsUi'];
+    $pickers = $editorViewData['pickers'];
+    $revisions = $editorViewData['revisions'];
+    $templatePresetOptions = $editorViewData['presets'];
+    $editorInitialState = $editorViewData['initialState'];
 @endphp
 
 {{--
-    Form shell:
-    Keeps only shared server-side preparation and delegates UI sections to partials.
+    Shared full-screen module editor shell.
+    Data preparation lives in ModuleEditorViewDataFactory so this template only orchestrates rendering.
 --}}
 <form
     method="POST"
     action="{{ $action }}"
-    class="space-y-5"
-    x-data="moduleFormEditor(@js($moduleFormInitialState))"
+    class="flex h-full min-h-0 flex-col overflow-hidden"
+    x-data="moduleEditor(@js($editorInitialState))"
+    x-ref="moduleEditorForm"
+    @submit.capture="if (@js((bool) $flags['embeddedAccessLocked']) || !prepareForSubmit()) $event.preventDefault()"
 >
-    {{-- Shared module editor form used by create and edit pages --}}
     @csrf
-    @if ($isEdit)
+    @if ($flags['isEdit'])
         @method('PATCH')
         <input type="hidden" name="module_id" value="{{ $module->id }}">
     @endif
 
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div class="flex flex-col lg:flex-row min-h-[78vh]">
-            @include('services.modules.partials.form.main-pane')
-            @include('services.modules.partials.form.sidebar')
-        </div>
+    <input type="hidden" name="revision" value="{{ $revisions['selected'] }}">
+
+    @include('services.modules.partials.form.top-bar', [
+        'flags' => $flags,
+        'revisions' => $revisions,
+        'submitLabel' => $submitLabel,
+        'module' => $module,
+        'categories' => $categories,
+    ])
+
+    <div class="relative flex min-h-0 flex-1 overflow-hidden" x-ref="editorWorkspace" :class="workspaceClass()">
+        @include('services.modules.partials.form.sidebar', [
+            'flags' => $flags,
+            'templates' => $templates,
+            'jsonPayloads' => $jsonPayloads,
+            'rawJson' => $rawJson,
+            'settingsUi' => $settingsUi,
+            'pickers' => $pickers,
+            'templatePresetOptions' => $templatePresetOptions,
+            'providers' => $providers,
+        ])
+
+        <div
+            x-show="layout !== 'preview'"
+            x-cloak
+            @pointerdown.prevent="startDragging($event)"
+            :class="gutterClass()"
+            class="module-editor-gutter shrink-0 bg-gray-200/70 transition-colors hover:bg-[#5EB4EE]/40"
+            :data-dragging="isDragging ? 'true' : 'false'"
+        ></div>
+
+        @include('services.modules.partials.form.main-pane', [
+            'flags' => $flags,
+            'preview' => $preview,
+            'revisions' => $revisions,
+            'module' => $module,
+        ])
+
+        @if ($flags['embeddedAccessLocked'])
+            {{-- Read-only overlay for modules assigned to embedded categories without permission. --}}
+            <div class="absolute inset-0 z-20 flex items-center justify-center bg-white/70 px-6 backdrop-blur-[1px]">
+                <div class="max-w-lg rounded-xl border border-amber-200 bg-white px-6 py-5 text-center shadow-lg">
+                    <p class="text-sm font-semibold uppercase tracking-widest text-amber-700">{{ __('Embedded Access Restricted') }}</p>
+                    <p class="mt-2 text-sm leading-6 text-gray-600">
+                        {{ __('This module belongs to a category that allows embedded content. You can inspect it, but editing and preview actions are locked until your account gets the embedded module permission.') }}
+                    </p>
+                </div>
+            </div>
+        @endif
     </div>
 </form>
