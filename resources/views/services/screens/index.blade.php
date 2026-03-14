@@ -1,6 +1,6 @@
 {{--
-    Overview:
-    This view composes the services > screens > index interface, arranging reusable components and route-driven actions so the page stays readable while presentation concerns remain separated from backend logic.
+    Screens service index page.
+    It now uses the shared light-mode modal shell for location management while keeping the existing card and filter layout intact.
 --}}
 
 <x-app-layout title="{{ __('Screens') }}">
@@ -9,69 +9,78 @@
     </x-slot>
 
     <x-slot name="header">
-        {{-- Keep modal open after successful CRUD by reading a flashed session flag. --}}
-        <div x-data="{ locationModalOpen: @js((bool) session('location_manager_open', false) || $errors->any()) }" class="w-full">
+        @php
+            /**
+             * Reopen the location manager after CRUD redirects or validation failures.
+             */
+            $locationManagerShouldOpen = (bool) session('location_manager_open', false) || $errors->any();
+        @endphp
+
+        <div
+            class="w-full"
+            x-data="{ locationModalOpen: @js($locationManagerShouldOpen) }"
+            @keydown.escape.window="locationModalOpen = false"
+        >
             <div class="flex items-start justify-between gap-4">
                 <x-services.page-header
                     title="{{ __('Screen Services') }}"
                     description="{{ __('Create screens and manage TV endpoints.') }}"
-    
                 >
                 </x-services.page-header>
 
-                <x-secondary-button @click="locationModalOpen = true">
+                <x-secondary-button type="button" @click="locationModalOpen = true">
                     <x-icon name="cog" class="size-6 mr-2" />
                     {{ __('Manage Locations') }}
                 </x-secondary-button>
             </div>
 
-            {{-- Shared manager modal for buildings/floors/rooms. --}}
-            <div
-                x-show="locationModalOpen"
-                style="display: none;"
-                class="fixed inset-0 z-50 overflow-y-auto"
-                role="dialog"
-                aria-modal="true">
+            {{-- Shared manager modal for buildings, floors, and rooms. --}}
+            <div x-show="locationModalOpen" x-cloak class="fixed inset-0 z-50">
                 <div
                     x-show="locationModalOpen"
-                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter="transition ease-out duration-300"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
-                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave="transition ease-in duration-200"
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
-                    class="fixed inset-0 bg-gray-500/75 transition-opacity"
+                    class="fixed inset-0 bg-gray-900/35 backdrop-blur-[1px]"
+                    @click="locationModalOpen = false"
                 ></div>
 
-                <div
-                    class="relative z-10 flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0"
-                    @click="locationModalOpen = false"
-                >
-                    <div
-                        x-show="locationModalOpen"
-                        x-transition:enter="ease-out duration-300"
-                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                        x-transition:leave="ease-in duration-200"
-                        x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                        x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                        class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-7xl"
-                        @click.stop
-                    >
-                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100">
-                            <div class="sm:flex sm:items-start justify-between">
-                                <h3 class="text-lg font-semibold leading-6 text-gray-900">
-                                    {{ __('Location Manager') }}
-                                </h3>
-                                <button @click="locationModalOpen = false" class="text-gray-400 hover:text-gray-500">
-                                    <span class="sr-only">{{ __('Close') }}</span>
-                                    <x-icon name="x" class="w-6 h-6" />
-                                </button>
-                            </div>
-                        </div>
+                <div class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-6">
+                    <div class="flex min-h-full items-center justify-center">
+                        <div
+                            x-show="locationModalOpen"
+                            x-transition:enter="transform transition ease-out duration-300"
+                            x-transition:enter-start="translate-y-4 opacity-0 sm:scale-95"
+                            x-transition:enter-end="translate-y-0 opacity-100 sm:scale-100"
+                            x-transition:leave="transform transition ease-in duration-200"
+                            x-transition:leave-start="translate-y-0 opacity-100 sm:scale-100"
+                            x-transition:leave-end="translate-y-4 opacity-0 sm:scale-95"
+                            class="flex w-full max-w-7xl max-h-[min(86vh,900px)] min-h-[30rem] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                        >
+                            <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">{{ __('Location Manager') }}</h3>
+                                        <p class="mt-1 text-sm text-gray-500">{{ __('Manage buildings, floors, and rooms inside the same shared modal system used by the rest of the application.') }}</p>
+                                    </div>
 
-                        <div class="px-4 py-4 sm:p-6">
-                            @include('services.screens.partials.location-manager')
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
+                                        @click="locationModalOpen = false"
+                                    >
+                                        <span class="sr-only">{{ __('Close') }}</span>
+                                        <x-icon name="x" class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="min-h-0 flex-1 overflow-auto px-5 py-5 sm:px-6">
+                                @include('services.screens.partials.location-manager')
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -110,13 +119,7 @@
             ])->values();
         @endphp
 
-        {{-- Shared flash area for all screen/location operations. --}}
-        @if (session('success'))
-            <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
+        {{-- Contextual screen validation remains inline because it is specific to the filter/content area below. --}}
         @if ($errors->has('screen'))
             <div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {{ $errors->first('screen') }}

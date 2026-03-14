@@ -15,9 +15,22 @@
         $typeManagerShouldOpen = $contentTypeManagerErrors->isNotEmpty() || old('return_modal') === 'types' || $openContentManager === 'types';
     @endphp
 
-    {{-- Header actions stay close to the page title while reusable modal shells live in the shared component. --}}
+    {{-- Header actions keep local Alpine modal state so these managers do not depend on the shared named-modal event bus. --}}
     <x-slot name="header">
-        <div class="w-full">
+        <div
+            class="w-full"
+            x-data="{
+                tagModalOpen: @js($tagManagerShouldOpen),
+                typeModalOpen: @js($typeManagerShouldOpen),
+            }"
+            @keydown.escape.window="
+                if (typeModalOpen) {
+                    typeModalOpen = false;
+                } else if (tagModalOpen) {
+                    tagModalOpen = false;
+                }
+            "
+        >
             <div class="flex items-start justify-between gap-4">
                 <x-services.page-header
                     title="{{ __('Content Services') }}"
@@ -26,14 +39,14 @@
 
                 <div class="flex items-center gap-2 whitespace-nowrap">
                     @can('manage_tags')
-                        <x-secondary-button type="button" @click="$dispatch('open-modal', { name: 'tag-manager' })">
+                        <x-secondary-button type="button" @click="tagModalOpen = true">
                             <x-icon name="hashtag" class="w-4 h-4 mr-2"/>
                             {{ __('Tags') }}
                         </x-secondary-button>
                     @endcan
 
                     @can('manage_content_types')
-                        <x-secondary-button type="button" @click="$dispatch('open-modal', { name: 'content-type-manager' })">
+                        <x-secondary-button type="button" @click="typeModalOpen = true">
                             <x-icon name="min-cog" class="w-4 h-4 mr-2"/>
                             {{ __('Types') }}
                         </x-secondary-button>
@@ -41,62 +54,112 @@
                 </div>
             </div>
 
-            {{-- Tag manager dialog reuses the shared light modal shell and reopens when the session requests it. --}}
+            {{-- Tag manager dialog uses page-local Alpine state and keeps the same reopen behavior after redirects. --}}
             @can('manage_tags')
-                <x-modal name="tag-manager" :show="$tagManagerShouldOpen" maxWidth="4xl">
-                    <div class="flex max-h-[min(80vh,720px)] min-h-[24rem] flex-col bg-white">
-                        <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
-                            <div class="flex items-start justify-between gap-4">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900">{{ __('Manage Tags') }}</h3>
-                                    <p class="mt-1 text-sm text-gray-500">{{ __('Create, search, and remove reusable content tags without leaving the content landing page.') }}</p>
+                <div x-show="tagModalOpen" x-cloak class="fixed inset-0 z-50">
+                    <div
+                        x-show="tagModalOpen"
+                        x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        class="fixed inset-0 bg-gray-900/35 backdrop-blur-[1px]"
+                        @click="tagModalOpen = false"
+                    ></div>
+
+                    <div class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-6">
+                        <div class="flex min-h-full items-center justify-center">
+                            <div
+                                x-show="tagModalOpen"
+                                x-transition:enter="transform transition ease-out duration-300"
+                                x-transition:enter-start="translate-y-4 opacity-0 sm:scale-95"
+                                x-transition:enter-end="translate-y-0 opacity-100 sm:scale-100"
+                                x-transition:leave="transform transition ease-in duration-200"
+                                x-transition:leave-start="translate-y-0 opacity-100 sm:scale-100"
+                                x-transition:leave-end="translate-y-4 opacity-0 sm:scale-95"
+                                class="flex w-full max-w-4xl max-h-[min(80vh,720px)] min-h-[24rem] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                            >
+                                <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900">{{ __('Manage Tags') }}</h3>
+                                            <p class="mt-1 text-sm text-gray-500">{{ __('Create, search, and remove reusable content tags without leaving the content landing page.') }}</p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
+                                            @click="tagModalOpen = false"
+                                        >
+                                            <span class="sr-only">{{ __('Close') }}</span>
+                                            <x-icon name="x" class="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
-                                    @click="$dispatch('close-modal', { name: 'tag-manager' })"
-                                >
-                                    <span class="sr-only">{{ __('Close') }}</span>
-                                    <x-icon name="x" class="h-4 w-4" />
-                                </button>
+                                <div class="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-6">
+                                    @include('services.content.partials.tag-manager')
+                                </div>
                             </div>
                         </div>
-
-                        <div class="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-6">
-                            @include('services.content.partials.tag-manager')
-                        </div>
                     </div>
-                </x-modal>
+                </div>
             @endcan
 
-            {{-- Content-type manager uses the same shared shell with a wider layout for the type table. --}}
+            {{-- Content-type manager uses the same local modal pattern with a wider shell for the type table. --}}
             @can('manage_content_types')
-                <x-modal name="content-type-manager" :show="$typeManagerShouldOpen" maxWidth="6xl">
-                    <div class="flex max-h-[min(84vh,860px)] min-h-[28rem] flex-col bg-white">
-                        <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
-                            <div class="flex items-start justify-between gap-4">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900">{{ __('Manage Content Types') }}</h3>
-                                    <p class="mt-1 text-sm text-gray-500">{{ __('Maintain file rules and reusable type definitions in the same light modal system used across the app.') }}</p>
+                <div x-show="typeModalOpen" x-cloak class="fixed inset-0 z-50">
+                    <div
+                        x-show="typeModalOpen"
+                        x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        class="fixed inset-0 bg-gray-900/35 backdrop-blur-[1px]"
+                        @click="typeModalOpen = false"
+                    ></div>
+
+                    <div class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-6">
+                        <div class="flex min-h-full items-center justify-center">
+                            <div
+                                x-show="typeModalOpen"
+                                x-transition:enter="transform transition ease-out duration-300"
+                                x-transition:enter-start="translate-y-4 opacity-0 sm:scale-95"
+                                x-transition:enter-end="translate-y-0 opacity-100 sm:scale-100"
+                                x-transition:leave="transform transition ease-in duration-200"
+                                x-transition:leave-start="translate-y-0 opacity-100 sm:scale-100"
+                                x-transition:leave-end="translate-y-4 opacity-0 sm:scale-95"
+                                class="flex w-full max-w-6xl max-h-[min(84vh,860px)] min-h-[28rem] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                            >
+                                <div class="border-b border-gray-100 px-5 py-4 sm:px-6">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900">{{ __('Manage Content Types') }}</h3>
+                                            <p class="mt-1 text-sm text-gray-500">{{ __('Maintain file rules and reusable type definitions in the same light modal system used across the app.') }}</p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
+                                            @click="typeModalOpen = false"
+                                        >
+                                            <span class="sr-only">{{ __('Close') }}</span>
+                                            <x-icon name="x" class="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
-                                    @click="$dispatch('close-modal', { name: 'content-type-manager' })"
-                                >
-                                    <span class="sr-only">{{ __('Close') }}</span>
-                                    <x-icon name="x" class="h-4 w-4" />
-                                </button>
+                                <div class="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-6">
+                                    @include('services.content.partials.content-type-manager')
+                                </div>
                             </div>
                         </div>
-
-                        <div class="min-h-0 flex-1 overflow-hidden px-5 py-5 sm:px-6">
-                            @include('services.content.partials.content-type-manager')
-                        </div>
                     </div>
-                </x-modal>
+                </div>
             @endcan
         </div>
     </x-slot>
