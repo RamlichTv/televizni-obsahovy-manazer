@@ -70,6 +70,7 @@ class CreateScreensAndTypesTables extends Migration
             $table->boolean('is_interactive')->default(false);
             $table->timestamp('last_seen_at')->nullable();
             $table->integer('auto_refresh_interval')->nullable();
+            $table->integer('screensaver_idle_interval')->nullable();
             $table->json('ip_whitelist')->nullable();
             $table->json('ip_blacklist')->nullable();
             $table->timestamps();

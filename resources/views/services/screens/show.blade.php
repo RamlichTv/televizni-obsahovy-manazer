@@ -64,8 +64,20 @@
     // Non-online statuses render dedicated fallback pages instead of profile playback.
     $statusName = strtolower((string) ($screen->status?->name ?? 'online'));
     $screenMode = in_array($statusName, ['offline', 'maintenance'], true) ? $statusName : 'online';
-    $screensaverModule = collect($screen->screensaverModules ?? [])
-        ->first(fn ($module): bool => (bool) ($module->is_active ?? false));
+    $screensaverHtml = isset($screensaverHtml) && is_string($screensaverHtml) && trim($screensaverHtml) !== ''
+        ? $screensaverHtml
+        : null;
+    $hasRenderableScreensaver = $screensaverHtml !== null;
+    $hasPlayableContent = $profile !== null && $pages->isNotEmpty();
+    $usesEmptyStateScreensaver = $screenMode === 'online' && !$hasPlayableContent && $hasRenderableScreensaver;
+    $interactiveScreen = (bool) $screen->is_interactive;
+    $interactionSurfaceClass = $interactiveScreen ? '' : 'pointer-events-none select-none';
+    $idleScreensaverInterval = max(0, (int) ($screen->screensaver_idle_interval ?? 0));
+    $idleScreensaverEnabled = $screenMode === 'online'
+        && $hasPlayableContent
+        && $interactiveScreen
+        && $hasRenderableScreensaver
+        && $idleScreensaverInterval >= 5;
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -86,6 +98,7 @@
                 pageCount: {{ max(1, $pages->count()) }},
                 pageNames: @js($pages->pluck('name')->values()),
                 durations: @js($durations),
+                playbackEnabled: @js($hasPlayableContent),
                 autoRotate: @js($autoRotate),
                 loopPages: @js($loopPages),
                 showPageName: @js($showPageName),
@@ -93,11 +106,15 @@
                 transitionType: @js($transitionType),
                 transitionDuration: @js($transitionDurationMs),
                 refreshInterval: @js($screen->auto_refresh_interval),
+                interactiveScreen: @js($interactiveScreen),
+                idleScreensaverEnabled: @js($idleScreensaverEnabled),
+                idleScreensaverInterval: @js($idleScreensaverInterval),
                 renderWidth: @js($renderWidth),
                 renderHeight: @js($renderHeight),
             })"
             x-init="init()"
             x-on:resize.window.debounce.100ms="fitCanvas()"
+            x-on:message.window="handleRuntimeMessage($event)"
             x-on:pointerdown.window="handleUserActivity()"
             x-on:keydown.window="handleUserActivity()"
             x-on:wheel.window.passive="handleUserActivity()"
@@ -105,14 +122,14 @@
         >
             @if ($screenMode === 'offline')
                 {{-- Offline/maintenance modes bypass normal profile playback completely. --}}
-                @if ($screensaverModule)
-                    <section class="h-full w-full bg-slate-900 p-2">
+                @if ($hasRenderableScreensaver)
+                    <section class="h-full w-full bg-slate-900 p-2 {{ $interactionSurfaceClass }}" @if (!$interactiveScreen) inert @endif>
                         <article class="h-full w-full min-h-0 overflow-hidden rounded-lg bg-white shadow-sm">
-                            <x-modules.render :module="$screensaverModule" />
+                            {!! $screensaverHtml !!}
                         </article>
                     </section>
                 @else
-                    <section class="grid h-full w-full place-items-center bg-slate-900 px-8 text-center text-white">
+                    <section class="grid h-full w-full place-items-center bg-slate-900 px-8 text-center text-white {{ $interactionSurfaceClass }}" @if (!$interactiveScreen) inert @endif>
                         <div class="max-w-2xl">
                             <p class="text-xs font-semibold tracking-[0.18em] text-slate-300">{{ __('SCREEN STATUS') }}</p>
                             <h1 class="mt-3 text-5xl font-bold">{{ __('OFFLINE') }}</h1>
@@ -121,14 +138,14 @@
                     </section>
                 @endif
             @elseif ($screenMode === 'maintenance')
-                @if ($screensaverModule)
-                    <section class="h-full w-full bg-amber-50 p-2">
+                @if ($hasRenderableScreensaver)
+                    <section class="h-full w-full bg-amber-50 p-2 {{ $interactionSurfaceClass }}" @if (!$interactiveScreen) inert @endif>
                         <article class="h-full w-full min-h-0 overflow-hidden rounded-lg bg-white shadow-sm">
-                            <x-modules.render :module="$screensaverModule" />
+                            {!! $screensaverHtml !!}
                         </article>
                     </section>
                 @else
-                    <section class="grid h-full w-full place-items-center bg-amber-50 px-8 text-center text-amber-900">
+                    <section class="grid h-full w-full place-items-center bg-amber-50 px-8 text-center text-amber-900 {{ $interactionSurfaceClass }}" @if (!$interactiveScreen) inert @endif>
                         <div class="max-w-2xl">
                             <p class="text-xs font-semibold tracking-[0.18em] text-amber-600">{{ __('SCREEN STATUS') }}</p>
                             <h1 class="mt-3 text-5xl font-bold">{{ __('MAINTENANCE') }}</h1>
@@ -139,8 +156,13 @@
             @else
                 {{-- The viewport scales a fixed pixel canvas so rendered modules respect the configured screen size. --}}
                 <div class="absolute inset-0 overflow-hidden bg-gray-100" x-ref="viewport">
-                    <div class="absolute overflow-hidden border border-gray-300 bg-gray-100 shadow-sm" :style="canvasStyle">
-                        @if ($profile === null)
+                    <div class="absolute overflow-hidden border border-gray-300 bg-gray-100 shadow-sm {{ $interactionSurfaceClass }}" :style="canvasStyle" @if (!$interactiveScreen) inert @endif>
+                        @if ($usesEmptyStateScreensaver)
+                            {{-- Online screens can fall back to the assigned screensaver when no playable content exists yet. --}}
+                            <div class="h-full w-full bg-white">
+                                {!! $screensaverHtml !!}
+                            </div>
+                        @elseif ($profile === null)
                             {{-- Screen is reachable, but has no profile assigned yet. --}}
                             <section class="grid h-full place-items-center px-8 text-center">
                                 <div>
@@ -231,14 +253,29 @@
                                         </section>
                                     </template>
                                 @endforeach
+
+                                @if ($idleScreensaverEnabled)
+                                    {{-- Idle-mode screensaver reuses the same safe runtime html as the fallback states. --}}
+                                    <section
+                                        x-show="isIdleScreensaverActive"
+                                        x-cloak
+                                        class="absolute inset-0 z-40 bg-white"
+                                        @pointerdown="handleUserActivity()"
+                                        @touchstart.passive="handleUserActivity()"
+                                    >
+                                        <div class="h-full w-full">
+                                            {!! $screensaverHtml !!}
+                                        </div>
+                                    </section>
+                                @endif
                             </div>
                         @endif
 
-                        @if ($screen->is_interactive)
+                        @if ($hasPlayableContent && $screen->is_interactive)
                             {{-- Manual page navigation is available only on interactive screens. --}}
                             <button
                                 type="button"
-                                x-show="pageCount > 1"
+                                x-show="pageCount > 1 && !isIdleScreensaverActive"
                                 x-cloak
                                 class="absolute left-0 top-1/2 z-30 -translate-y-1/2 rounded-r-full border border-transparent bg-[#077cb6] p-1 py-4 text-white shadow-sm transition ease-in-out duration-150 hover:bg-[#E69C24] focus:bg-[#D78500] active:bg-[#D78500] focus:outline-none focus:ring-2 focus:ring-[#D78500] focus:ring-offset-2"
                                 @click="previousPage()"
@@ -250,7 +287,7 @@
 
                             <button
                                 type="button"
-                                x-show="pageCount > 1"
+                                x-show="pageCount > 1 && !isIdleScreensaverActive"
                                 x-cloak
                                 class="absolute right-0 top-1/2 z-30 -translate-y-1/2 rounded-l-full border border-transparent bg-[#077cb6] p-1 py-4 text-white shadow-sm transition ease-in-out duration-150 hover:bg-[#E69C24] focus:bg-[#D78500] active:bg-[#D78500] focus:outline-none focus:ring-2 focus:ring-[#D78500] focus:ring-offset-2"
                                 @click="nextPage()"
@@ -261,9 +298,10 @@
                             </button>
                         @endif
 
-                        @if ($showPageName || $showPageIndicators)
+                        @if ($hasPlayableContent && ($showPageName || $showPageIndicators))
                             <div
                                 x-cloak
+                                x-show="!isIdleScreensaverActive"
                                 class="pointer-events-none absolute bottom-3 right-3 rounded-md border border-gray-200 bg-white/90 px-3 py-1.5 text-xs text-gray-700 shadow-sm"
                             >
                                 <p x-show="showPageName" x-text="pageNames[activePage] ?? ''"></p>
@@ -282,6 +320,8 @@
                     pageCount: Number(config.pageCount) || 1,
                     pageNames: Array.isArray(config.pageNames) ? config.pageNames : [],
                     durations: Array.isArray(config.durations) ? config.durations : [10],
+                    playbackEnabled: Boolean(config.playbackEnabled),
+                    interactiveScreen: Boolean(config.interactiveScreen),
                     autoRotate: Boolean(config.autoRotate),
                     loopPages: Boolean(config.loopPages),
                     showPageName: Boolean(config.showPageName),
@@ -289,20 +329,26 @@
                     transitionType: String(config.transitionType || 'slide'),
                     transitionDuration: Math.max(100, Math.min(10000, Number(config.transitionDuration) || 300)),
                     refreshInterval: Number(config.refreshInterval),
+                    idleScreensaverEnabled: Boolean(config.idleScreensaverEnabled),
+                    idleScreensaverInterval: Math.max(0, Number(config.idleScreensaverInterval) || 0),
                     renderWidth: Math.max(100, Number(config.renderWidth) || 1920),
                     renderHeight: Math.max(100, Number(config.renderHeight) || 1080),
                     rotationTimer: null,
                     refreshTimer: null,
+                    idleScreensaverTimer: null,
                     motionTimer: null,
+                    isIdleScreensaverActive: false,
                     pageMotionClass: '',
                     pageMotionStyle: '',
                     canvasStyle: '',
+                    runtimeActivityMessageType: 'tom-module-runtime-activity',
 
                     init() {
                         this.fitCanvas();
                         // Start both timers once Alpine initializes the player.
                         this.scheduleRotation();
                         this.scheduleRefresh();
+                        this.scheduleIdleScreensaver();
                     },
 
                     fitCanvas() {
@@ -327,7 +373,7 @@
                     scheduleRotation() {
                         window.clearTimeout(this.rotationTimer);
 
-                        if (!this.autoRotate || this.pageCount <= 1) {
+                        if (!this.playbackEnabled || this.isIdleScreensaverActive || !this.autoRotate || this.pageCount <= 1) {
                             return;
                         }
 
@@ -338,7 +384,7 @@
                     },
 
                     nextPage() {
-                        if (this.pageCount <= 1) {
+                        if (!this.playbackEnabled || this.isIdleScreensaverActive || this.pageCount <= 1) {
                             return;
                         }
 
@@ -359,7 +405,7 @@
                     },
 
                     previousPage() {
-                        if (this.pageCount <= 1) {
+                        if (!this.playbackEnabled || this.isIdleScreensaverActive || this.pageCount <= 1) {
                             return;
                         }
 
@@ -384,7 +430,7 @@
                         this.pageMotionClass = '';
                         this.pageMotionStyle = '';
 
-                        if (this.transitionType === 'none') {
+                        if (!this.playbackEnabled || this.isIdleScreensaverActive || this.transitionType === 'none') {
                             return;
                         }
 
@@ -414,8 +460,67 @@
                         }, this.refreshInterval * 1000);
                     },
 
+                    scheduleIdleScreensaver() {
+                        window.clearTimeout(this.idleScreensaverTimer);
+
+                        if (!this.idleScreensaverEnabled || this.idleScreensaverInterval < 5 || this.isIdleScreensaverActive) {
+                            return;
+                        }
+
+                        this.idleScreensaverTimer = window.setTimeout(() => {
+                            this.activateIdleScreensaver();
+                        }, this.idleScreensaverInterval * 1000);
+                    },
+
+                    activateIdleScreensaver() {
+                        if (!this.idleScreensaverEnabled || this.isIdleScreensaverActive) {
+                            return;
+                        }
+
+                        this.isIdleScreensaverActive = true;
+                        window.clearTimeout(this.rotationTimer);
+                        window.clearTimeout(this.motionTimer);
+                        this.pageMotionClass = '';
+                        this.pageMotionStyle = '';
+                    },
+
+                    deactivateIdleScreensaver() {
+                        if (!this.isIdleScreensaverActive) {
+                            return;
+                        }
+
+                        this.isIdleScreensaverActive = false;
+                        this.scheduleRotation();
+                    },
+
+                    handleRuntimeMessage(event) {
+                        if (!this.interactiveScreen) {
+                            return;
+                        }
+
+                        const payload = event?.data;
+                        if (!payload || typeof payload !== 'object') {
+                            return;
+                        }
+
+                        if (payload.type !== this.runtimeActivityMessageType || payload.source !== 'tom-module-runtime') {
+                            return;
+                        }
+
+                        this.handleUserActivity();
+                    },
+
                     handleUserActivity() {
+                        if (!this.interactiveScreen) {
+                            return;
+                        }
+
+                        if (this.isIdleScreensaverActive) {
+                            this.deactivateIdleScreensaver();
+                        }
+
                         this.scheduleRefresh();
+                        this.scheduleIdleScreensaver();
                     },
                 };
             }

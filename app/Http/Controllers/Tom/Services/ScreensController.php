@@ -12,13 +12,26 @@ use App\Models\Room;
 use App\Models\Screen;
 use App\Models\ScreenOrientation;
 use App\Models\ScreenStatus;
+use App\Support\Modules\ModuleRenderer;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Throwable;
 
 class ScreensController extends Controller
 {
+    /**
+     * @param ModuleRenderer $moduleRenderer
+     * @return void
+     */
+    public function __construct(
+        private readonly ModuleRenderer $moduleRenderer,
+    ) {
+    }
+
     /**
      * Display a listing of screens.
      *
@@ -147,8 +160,10 @@ class ScreensController extends Controller
             'room:id,name,floor_id',
             'room.floor:id,name,building_id',
             'room.floor.building:id,name',
-            'screensaverModules:id,name,category,is_active',
-            'screensaverModules.moduleCategory:id,name,is_screensaver',
+            // Screensaver rendering needs the module's stored asset paths and render data.
+            'screensaverModules' => fn ($query) => $query->with([
+                'moduleCategory:id,name,slug,is_widget,is_screensaver,allow_embedded,is_system',
+            ]),
             'profile:id,name,slug,settings',
             'profile.pages' => fn ($query) => $query->orderBy('order')->orderBy('id'),
             'profile.pages.rows' => fn ($query) => $query->orderBy('index'),
@@ -157,7 +172,13 @@ class ScreensController extends Controller
             'profile.pages.modules.module.moduleCategory:id,name,slug,is_widget,is_system',
         ]);
 
-        return view('services.screens.show', ['screen' => $screen]);
+        return view('services.screens.show', [
+            'screen' => $screen,
+            'screensaverHtml' => $this->resolveScreensaverHtml(
+                screen: $screen,
+                viewer: $request->user(),
+            ),
+        ]);
     }
 
     /**
@@ -405,6 +426,7 @@ class ScreensController extends Controller
             'width' => isset($validated['width']) ? (int) $validated['width'] : null,
             'height' => isset($validated['height']) ? (int) $validated['height'] : null,
             'auto_refresh_interval' => isset($validated['auto_refresh_interval']) ? (int) $validated['auto_refresh_interval'] : null,
+            'screensaver_idle_interval' => isset($validated['screensaver_idle_interval']) ? (int) $validated['screensaver_idle_interval'] : null,
             'is_interactive' => (bool) ($validated['is_interactive'] ?? false),
             'description' => trim((string) ($validated['description'] ?? '')) !== ''
                 ? (string) $validated['description']
@@ -496,5 +518,45 @@ class ScreensController extends Controller
             ->value('id');
 
         return $firstStatusId !== null ? (int) $firstStatusId : null;
+    }
+
+    /**
+     * Render the assigned screensaver safely for monitor usage.
+     *
+     * The monitor should fall back to plain status/empty-state pages instead of
+     * exposing the red module-error panel when a screensaver module is broken.
+     *
+     * @param Screen $screen
+     * @param Authenticatable|null $viewer
+     * @return string|null
+     */
+    private function resolveScreensaverHtml(Screen $screen, ?Authenticatable $viewer = null): ?string
+    {
+        $screensaverModule = $screen->screensaverModules
+            ->first(fn (Module $module): bool => (bool) ($module->is_active ?? false));
+
+        if (!$screensaverModule instanceof Module) {
+            return null;
+        }
+
+        try {
+            $html = $this->moduleRenderer->renderIsolatedHtml(
+                module: $screensaverModule,
+                instanceConfig: [],
+                viewer: $viewer,
+            );
+
+            return trim($html) !== '' ? $html : null;
+        } catch (Throwable $exception) {
+            Log::warning('Failed to render screen screensaver module.', [
+                'screen_id' => $screen->id,
+                'screen_name' => $screen->name,
+                'module_id' => $screensaverModule->id,
+                'module_name' => $screensaverModule->name,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 }

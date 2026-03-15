@@ -9,6 +9,126 @@ import Alpine from 'alpinejs';
  */
 window.Alpine = Alpine;
 
+const MODULE_RUNTIME_ACTIVITY_TYPE = 'tom-module-runtime-activity';
+
+/**
+ * Relay runtime activity to the parent monitor shell.
+ *
+ * Saved modules render inside an iframe-backed document, so the outer screen
+ * page cannot observe pointer/keyboard activity here unless we forward it.
+ */
+const notifyParentActivity = (reason = 'interaction') => {
+    if (window.parent === window) {
+        return;
+    }
+
+    try {
+        window.parent.postMessage({
+            type: MODULE_RUNTIME_ACTIVITY_TYPE,
+            source: 'tom-module-runtime',
+            reason,
+        }, '*');
+    } catch (error) {
+        // Ignore bridge failures; activity forwarding is best-effort only.
+    }
+};
+
+/**
+ * Attach listeners to nested embedded iframes so monitor timers still reset
+ * when interaction happens on the iframe surface or inside same-origin embeds.
+ */
+const initEmbeddedFrameActivityBridge = () => {
+    document.querySelectorAll('iframe').forEach((iframe) => {
+        if (!(iframe instanceof HTMLIFrameElement) || iframe.dataset.monitorActivityBridgeReady === '1') {
+            return;
+        }
+
+        const relay = (reason) => notifyParentActivity(reason);
+        const pointerEvents = ['pointerdown', 'pointerenter', 'touchstart'];
+
+        pointerEvents.forEach((eventName) => {
+            iframe.addEventListener(eventName, () => relay(`embedded-${eventName}`), { passive: true });
+        });
+
+        iframe.addEventListener('focus', () => relay('embedded-focus'));
+        iframe.addEventListener('load', () => {
+            relay('embedded-load');
+            attachSameOriginEmbedActivity(iframe);
+        });
+
+        iframe.dataset.monitorActivityBridgeReady = '1';
+        attachSameOriginEmbedActivity(iframe);
+    });
+};
+
+/**
+ * Bridge actual inner-document events when the embedded page is same-origin.
+ *
+ * Cross-origin documents are intentionally ignored here; the browser blocks
+ * DOM access, so we rely on iframe-surface activity in that case.
+ */
+const attachSameOriginEmbedActivity = (iframe) => {
+    try {
+        const innerWindow = iframe.contentWindow;
+        const innerDocument = innerWindow?.document;
+
+        if (!(innerWindow instanceof Window) || !(innerDocument instanceof Document)) {
+            return;
+        }
+
+        if (innerDocument.documentElement?.dataset.monitorActivityBridgeReady === '1') {
+            return;
+        }
+
+        const relay = () => notifyParentActivity('embedded-same-origin');
+        const eventMap = {
+            pointerdown: { capture: true, passive: true },
+            keydown: { capture: true },
+            wheel: { capture: true, passive: true },
+            touchstart: { capture: true, passive: true },
+        };
+
+        Object.entries(eventMap).forEach(([eventName, options]) => {
+            innerDocument.addEventListener(eventName, relay, options);
+        });
+
+        innerWindow.addEventListener('focus', relay);
+        innerDocument.documentElement.dataset.monitorActivityBridgeReady = '1';
+    } catch (error) {
+        // Cross-origin embeds land here; surface listeners above still cover them.
+    }
+};
+
+/**
+ * Forward activity from this runtime iframe to the monitor page.
+ */
+const initMonitorActivityBridge = () => {
+    const runtimeEvents = {
+        pointerdown: { capture: true, passive: true },
+        keydown: { capture: true },
+        wheel: { capture: true, passive: true },
+        touchstart: { capture: true, passive: true },
+    };
+
+    Object.entries(runtimeEvents).forEach(([eventName, options]) => {
+        document.addEventListener(eventName, () => notifyParentActivity(eventName), options);
+    });
+
+    window.addEventListener('focus', () => notifyParentActivity('runtime-focus'));
+    initEmbeddedFrameActivityBridge();
+
+    if ('MutationObserver' in window) {
+        const observer = new MutationObserver(() => {
+            initEmbeddedFrameActivityBridge();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+};
+
 /**
  * Scale embedded iframes into a fixed virtual canvas so they read like a
  * presentation surface instead of a scrollable browser window.
@@ -56,4 +176,5 @@ const initModuleEmbedFits = () => {
 };
 
 Alpine.start();
+initMonitorActivityBridge();
 initModuleEmbedFits();

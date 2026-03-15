@@ -44,6 +44,24 @@
         }
     }
 
+    $storedScreensaverIdleInterval = $isEdit ? $screen->screensaver_idle_interval : null;
+    $selectedScreensaverIdleUnit = old('screensaver_idle_unit');
+    if (!in_array($selectedScreensaverIdleUnit, ['seconds', 'minutes'], true)) {
+        $selectedScreensaverIdleUnit = ($storedScreensaverIdleInterval !== null && $storedScreensaverIdleInterval % 60 === 0)
+            ? 'minutes'
+            : 'seconds';
+    }
+    $screensaverIdleInputValue = old('screensaver_idle_value');
+    if ($screensaverIdleInputValue === null) {
+        if ($storedScreensaverIdleInterval === null) {
+            $screensaverIdleInputValue = '';
+        } elseif ($selectedScreensaverIdleUnit === 'minutes' && $storedScreensaverIdleInterval % 60 === 0) {
+            $screensaverIdleInputValue = (string) ($storedScreensaverIdleInterval / 60);
+        } else {
+            $screensaverIdleInputValue = (string) $storedScreensaverIdleInterval;
+        }
+    }
+
     $defaultOnlineStatus = $statuses->first(fn ($status): bool => strtolower((string) $status->name) === 'online')
         ?? $statuses->first();
     $defaultStatusId = $defaultOnlineStatus?->id ? (string) $defaultOnlineStatus->id : '';
@@ -288,6 +306,35 @@
                                     </div>
                                 </label>
                                 <x-input-error class="mt-2" :messages="$errors->get('is_interactive')" />
+                            </div>
+
+                            <div>
+                                <x-input-label for="screensaver_idle_value" :value="__('Idle Screensaver')" />
+                                {{-- Idle timeout stays disabled until the operator enters a value. --}}
+                                <div class="mt-1 grid items-stretch grid-cols-[minmax(0,1fr)_6.5rem] gap-2">
+                                    <x-text-input
+                                        id="screensaver_idle_value"
+                                        name="screensaver_idle_value"
+                                        type="number"
+                                        min="1"
+                                        max="86400"
+                                        class="block h-11 w-full text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                        :value="$screensaverIdleInputValue"
+                                        placeholder="{{ __('Disabled') }}"
+                                    />
+                                    <select
+                                        id="screensaver_idle_unit"
+                                        name="screensaver_idle_unit"
+                                        class="h-11 w-full rounded-md border-gray-300 bg-white px-3 text-sm shadow-sm focus:border-[#5EB4EE] focus:ring-[#5EB4EE]"
+                                    >
+                                        <option value="seconds" @selected($selectedScreensaverIdleUnit === 'seconds')>{{ __('s') }}</option>
+                                        <option value="minutes" @selected($selectedScreensaverIdleUnit === 'minutes')>{{ __('min') }}</option>
+                                    </select>
+                                </div>
+                                <p class="mt-1 text-xs text-slate-500">{{ __('After inactivity, interactive screens switch to the assigned screensaver. Leave blank to disable.') }}</p>
+                                <x-input-error class="mt-2" :messages="$errors->get('screensaver_idle_value')" />
+                                <x-input-error class="mt-2" :messages="$errors->get('screensaver_idle_unit')" />
+                                <x-input-error class="mt-2" :messages="$errors->get('screensaver_idle_interval')" />
                             </div>
 
                             <div>

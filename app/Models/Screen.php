@@ -28,6 +28,7 @@ class Screen extends Model
         'is_interactive',
         'last_seen_at',
         'auto_refresh_interval',
+        'screensaver_idle_interval',
         'ip_whitelist',
         'ip_blacklist',
     ];
@@ -41,6 +42,7 @@ class Screen extends Model
         'is_interactive' => 'boolean',
         'last_seen_at' => 'datetime',
         'auto_refresh_interval' => 'integer',
+        'screensaver_idle_interval' => 'integer',
         'ip_whitelist' => 'array',
         'ip_blacklist' => 'array',
     ];

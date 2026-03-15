@@ -42,6 +42,9 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'auto_refresh_value' => ['nullable', 'integer'],
             'auto_refresh_unit' => ['nullable', 'string', Rule::in(['seconds', 'minutes'])],
             'auto_refresh_interval' => ['nullable', 'integer', 'min:5', 'max:86400'],
+            'screensaver_idle_value' => ['nullable', 'integer'],
+            'screensaver_idle_unit' => ['nullable', 'string', Rule::in(['seconds', 'minutes'])],
+            'screensaver_idle_interval' => ['nullable', 'integer', 'min:5', 'max:86400'],
             'last_seen_at' => ['nullable', 'date'],
             'ip_whitelist' => ['nullable', 'array'],
             'ip_whitelist.*' => ['string', 'ip'],
@@ -82,6 +85,10 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'auto_refresh_unit.in' => __('Auto refresh unit must be seconds or minutes.'),
             'auto_refresh_interval.min' => __('Auto refresh must be at least 5 seconds.'),
             'auto_refresh_interval.max' => __('Auto refresh cannot exceed 24 hours.'),
+            'screensaver_idle_value.integer' => __('Idle screensaver value must be a whole number.'),
+            'screensaver_idle_unit.in' => __('Idle screensaver unit must be seconds or minutes.'),
+            'screensaver_idle_interval.min' => __('Idle screensaver must be at least 5 seconds.'),
+            'screensaver_idle_interval.max' => __('Idle screensaver cannot exceed 24 hours.'),
         ];
     }
 
@@ -113,6 +120,50 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
     }
 
     /**
+     * Normalize one UI interval pair into its stored seconds value.
+     *
+     * @param string $valueField
+     * @param string $unitField
+     * @param string $intervalField
+     * @return array<string, mixed>
+     */
+    private function normalizeIntervalInput(string $valueField, string $unitField, string $intervalField): array
+    {
+        $value = $this->input($valueField, $this->input($intervalField));
+        $unit = strtolower(trim((string) $this->input($unitField, 'seconds')));
+
+        if (!in_array($unit, ['seconds', 'minutes'], true)) {
+            $unit = 'seconds';
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+        }
+
+        if ($value === '' || $value === null) {
+            return [
+                $valueField => null,
+                $unitField => $unit,
+                $intervalField => null,
+            ];
+        }
+
+        $normalized = [
+            $valueField => $value,
+            $unitField => $unit,
+        ];
+
+        if (
+            is_int($value)
+            || (is_string($value) && preg_match('/^\d+$/', $value) === 1)
+        ) {
+            $normalized[$intervalField] = (int) $value * ($unit === 'minutes' ? 60 : 1);
+        }
+
+        return $normalized;
+    }
+
+    /**
      * Prepare payload before validation.
      *
      * @return void
@@ -129,6 +180,8 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             'width',
             'auto_refresh_value',
             'auto_refresh_interval',
+            'screensaver_idle_value',
+            'screensaver_idle_interval',
             'last_seen_at',
         ];
 
@@ -153,29 +206,20 @@ class ScreenRequest extends \Illuminate\Foundation\Http\FormRequest
             }
         }
 
-        $refreshValue = $this->input('auto_refresh_value', $this->input('auto_refresh_interval'));
-        $refreshUnit = strtolower(trim((string) $this->input('auto_refresh_unit', 'seconds')));
-
-        if (is_string($refreshValue)) {
-            $refreshValue = trim($refreshValue);
-        }
-
-        // The UI splits refresh into value + unit, but persistence still stores a single seconds column.
-        if ($refreshValue === '' || $refreshValue === null) {
-            $normalized['auto_refresh_value'] = null;
-            $normalized['auto_refresh_interval'] = null;
-        } else {
-            $normalized['auto_refresh_value'] = $refreshValue;
-
-            if (
-                is_int($refreshValue)
-                || (is_string($refreshValue) && preg_match('/^\d+$/', $refreshValue) === 1)
-            ) {
-                $normalized['auto_refresh_interval'] = (int) $refreshValue * ($refreshUnit === 'minutes' ? 60 : 1);
-            }
-        }
-
-        $normalized['auto_refresh_unit'] = $refreshUnit;
+        // The UI splits refresh and idle screensaver timers into value + unit pairs.
+        $normalized = array_merge(
+            $normalized,
+            $this->normalizeIntervalInput(
+                valueField: 'auto_refresh_value',
+                unitField: 'auto_refresh_unit',
+                intervalField: 'auto_refresh_interval',
+            ),
+            $this->normalizeIntervalInput(
+                valueField: 'screensaver_idle_value',
+                unitField: 'screensaver_idle_unit',
+                intervalField: 'screensaver_idle_interval',
+            ),
+        );
 
         $this->merge($normalized);
     }
