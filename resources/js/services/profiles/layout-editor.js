@@ -356,26 +356,23 @@ export function profileLayoutEditor(config = {}) {
                 return;
             }
 
-            const confirmed = await window.appConfirm({
+            window.appConfirm({
                 title: i18n.deletePageTitle ?? 'Delete Page',
                 message: i18n.confirmDeletePage,
                 confirmLabel: i18n.deleteAction ?? 'Delete',
                 cancelLabel: i18n.cancelAction ?? 'Cancel',
                 confirmVariant: 'danger',
+                onConfirm: async () => {
+                    try {
+                        const result = await this.request(this.pageDestroyUrl(page.id), 'DELETE');
+                        this.pages = this.pages.filter((candidate) => candidate.id !== page.id);
+                        this.activePageIndex = Math.max(0, this.activePageIndex - 1);
+                        this.flashSuccess(result.message ?? i18n.pageRemoved);
+                    } catch (error) {
+                        this.flashError(error.message);
+                    }
+                },
             });
-
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-                const result = await this.request(this.pageDestroyUrl(page.id), 'DELETE');
-                this.pages = this.pages.filter((candidate) => candidate.id !== page.id);
-                this.activePageIndex = Math.max(0, this.activePageIndex - 1);
-                this.flashSuccess(result.message ?? i18n.pageRemoved);
-            } catch (error) {
-                this.flashError(error.message);
-            }
         },
 
         // Increase row count and persist immediately.
@@ -731,27 +728,24 @@ export function profileLayoutEditor(config = {}) {
                 return;
             }
 
-            const confirmed = await window.appConfirm({
+            window.appConfirm({
                 title: i18n.removeModuleTitle ?? 'Remove Module',
                 message: i18n.confirmRemoveModule,
                 confirmLabel: i18n.deleteAction ?? 'Delete',
                 cancelLabel: i18n.cancelAction ?? 'Cancel',
                 confirmVariant: 'danger',
+                onConfirm: async () => {
+                    try {
+                        const result = await this.request(this.placementDestroyUrl(page.id, placement.id), 'DELETE');
+                        if (result.page) {
+                            this.applyPagePatch(result.page);
+                        }
+                        this.flashSuccess(result.message ?? i18n.moduleRemoved);
+                    } catch (error) {
+                        this.flashError(error.message);
+                    }
+                },
             });
-
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-                const result = await this.request(this.placementDestroyUrl(page.id, placement.id), 'DELETE');
-                if (result.page) {
-                    this.applyPagePatch(result.page);
-                }
-                this.flashSuccess(result.message ?? i18n.moduleRemoved);
-            } catch (error) {
-                this.flashError(error.message);
-            }
         },
 
         // Expand or shrink placement span while keeping it inside page bounds.

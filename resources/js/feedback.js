@@ -23,6 +23,9 @@
  * @property {string} [cancelLabel] Label for the secondary action button.
  * @property {'primary'|'danger'} [confirmVariant] Primary button style for confirm flows.
  * @property {string} [name] Named modal identifier used by reusable page dialogs.
+ * @property {(result: {id: string, confirmed: boolean}) => void} [resolveRequest] Direct resolver for promise-backed dialogs.
+ * @property {() => void|Promise<void>} [onConfirm] Optional callback executed after confirmation.
+ * @property {() => void|Promise<void>} [onCancel] Optional callback executed after cancellation.
  */
 
 /**
@@ -117,6 +120,31 @@ function focusableElements(root) {
 }
 
 /**
+ * Focus one element while gracefully handling browsers without focus options.
+ *
+ * @param {HTMLElement|null|undefined} element Focus target.
+ * @returns {void}
+ */
+function focusElement(element) {
+    if (!(element instanceof HTMLElement)) {
+        return;
+    }
+
+    try {
+        element.focus({ preventScroll: true });
+        return;
+    } catch {
+        // Fall back to plain focus in older browsers that reject focus options.
+    }
+
+    try {
+        element.focus();
+    } catch {
+        // Ignore focus failures so modal confirmation can continue.
+    }
+}
+
+/**
  * Increase the shared modal body-lock counter.
  *
  * This keeps background scrolling disabled while one or more dialogs are open.
@@ -191,7 +219,7 @@ function removeModalKey(key) {
  * @returns {boolean} True when this modal should own keyboard interactions.
  */
 function isTopModalKey(key) {
-    return activeModalStack.at(-1) === key;
+    return activeModalStack[activeModalStack.length - 1] === key;
 }
 
 /**
@@ -257,29 +285,6 @@ function openSystemModal(detail) {
     const requestId = String(detail.id ?? nextSystemModalId());
 
     return new Promise((resolve) => {
-        /**
-         * Resolve only the matching modal response.
-         *
-         * @param {CustomEvent<{id?: string, confirmed?: boolean}>} event Modal response event.
-         * @returns {void}
-         */
-        const handleResponse = (event) => {
-            const response = event.detail ?? {};
-
-            if (String(response.id ?? '') !== requestId) {
-                return;
-            }
-
-            window.removeEventListener('modal-response', handleResponse);
-
-            resolve({
-                id: requestId,
-                confirmed: Boolean(response.confirmed),
-            });
-        };
-
-        window.addEventListener('modal-response', handleResponse);
-
         dispatchFeedbackEvent('open-modal', {
             id: requestId,
             type: detail.type === 'confirm' ? 'confirm' : 'alert',
@@ -288,8 +293,42 @@ function openSystemModal(detail) {
             confirmLabel: String(detail.confirmLabel ?? (detail.type === 'confirm' ? 'Confirm' : 'OK')),
             cancelLabel: String(detail.cancelLabel ?? 'Cancel'),
             confirmVariant: detail.confirmVariant === 'danger' ? 'danger' : 'primary',
+            resolveRequest: resolve,
+            onConfirm: typeof detail.onConfirm === 'function' ? detail.onConfirm : null,
+            onCancel: typeof detail.onCancel === 'function' ? detail.onCancel : null,
         });
     });
+}
+
+/**
+ * Submit one previously confirmed form without reopening the shared modal.
+ *
+ * @param {HTMLFormElement} form Confirmed form instance.
+ * @param {HTMLElement|null} submitter Original submit button when available.
+ * @returns {void}
+ */
+function submitConfirmedForm(form, submitter = null) {
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+
+    if (typeof form.requestSubmit === 'function') {
+        form.dataset[CONFIRM_APPROVED_FLAG] = 'true';
+
+        try {
+            if (submitter) {
+                form.requestSubmit(submitter);
+                return;
+            }
+
+            form.requestSubmit();
+            return;
+        } catch {
+            // Fall through to the plain submit fallback when requestSubmit fails.
+        }
+    }
+
+    HTMLFormElement.prototype.submit.call(form);
 }
 
 /**
@@ -409,7 +448,7 @@ export function appNamedModal(config = {}) {
                     return;
                 }
 
-                this.open();
+                this.openModal();
             };
 
             this.boundCloseHandler = (event) => {
@@ -417,7 +456,7 @@ export function appNamedModal(config = {}) {
                     return;
                 }
 
-                this.close();
+                this.closeModal();
             };
 
             window.addEventListener('open-modal', this.boundOpenHandler);
@@ -467,7 +506,7 @@ export function appNamedModal(config = {}) {
          *
          * @returns {void}
          */
-        open() {
+        openModal() {
             this.show = true;
         },
 
@@ -476,7 +515,7 @@ export function appNamedModal(config = {}) {
          *
          * @returns {void}
          */
-        close() {
+        closeModal() {
             this.show = false;
         },
 
@@ -502,10 +541,7 @@ export function appNamedModal(config = {}) {
         deactivate() {
             removeModalKey(this.stackKey);
             unlockBodyScroll();
-
-            if (this.lastFocusedElement instanceof HTMLElement) {
-                this.lastFocusedElement.focus({ preventScroll: true });
-            }
+            focusElement(this.lastFocusedElement);
         },
 
         /**
@@ -538,7 +574,7 @@ export function appNamedModal(config = {}) {
                 }
 
                 const target = this.focusables()[0] ?? this.$refs.panel;
-                target?.focus?.({ preventScroll: true });
+                focusElement(target);
             });
         },
 
@@ -567,13 +603,13 @@ export function appNamedModal(config = {}) {
 
             if (event.shiftKey && activeElement === first) {
                 event.preventDefault();
-                last.focus();
+                focusElement(last);
                 return;
             }
 
             if (!event.shiftKey && activeElement === last) {
                 event.preventDefault();
-                first.focus();
+                focusElement(first);
             }
         },
     };
@@ -598,6 +634,9 @@ export function appSystemModal() {
         confirmVariant: 'primary',
         lastFocusedElement: null,
         boundOpenHandler: null,
+        resolveRequest: null,
+        confirmAction: null,
+        cancelAction: null,
 
         /**
          * Register the global system-modal listener.
@@ -612,7 +651,7 @@ export function appSystemModal() {
                     return;
                 }
 
-                this.open(detail);
+                this.openModal(detail);
             };
 
             window.addEventListener('open-modal', this.boundOpenHandler);
@@ -639,7 +678,7 @@ export function appSystemModal() {
          * @param {ModalPayload} detail Incoming modal detail payload.
          * @returns {void}
          */
-        open(detail) {
+        openModal(detail) {
             if (this.isOpen) {
                 this.respond(false);
             }
@@ -651,6 +690,9 @@ export function appSystemModal() {
             this.confirmLabel = String(detail.confirmLabel ?? (this.type === 'confirm' ? 'Confirm' : 'OK'));
             this.cancelLabel = String(detail.cancelLabel ?? 'Cancel');
             this.confirmVariant = detail.confirmVariant === 'danger' ? 'danger' : 'primary';
+            this.resolveRequest = typeof detail.resolveRequest === 'function' ? detail.resolveRequest : null;
+            this.confirmAction = typeof detail.onConfirm === 'function' ? detail.onConfirm : null;
+            this.cancelAction = typeof detail.onCancel === 'function' ? detail.onCancel : null;
             this.isOpen = true;
 
             this.activate();
@@ -679,10 +721,7 @@ export function appSystemModal() {
         release() {
             removeModalKey(stackKey);
             unlockBodyScroll();
-
-            if (this.lastFocusedElement instanceof HTMLElement) {
-                this.lastFocusedElement.focus({ preventScroll: true });
-            }
+            focusElement(this.lastFocusedElement);
         },
 
         /**
@@ -715,7 +754,7 @@ export function appSystemModal() {
                 }
 
                 const target = this.$refs.confirmButton ?? this.focusables()[0] ?? this.$refs.panel;
-                target?.focus?.({ preventScroll: true });
+                focusElement(target);
             });
         },
 
@@ -724,7 +763,7 @@ export function appSystemModal() {
          *
          * @returns {void}
          */
-        cancel() {
+        cancelModal() {
             this.respond(false);
         },
 
@@ -733,7 +772,7 @@ export function appSystemModal() {
          *
          * @returns {void}
          */
-        confirm() {
+        confirmModal() {
             this.respond(true);
         },
 
@@ -749,15 +788,35 @@ export function appSystemModal() {
             }
 
             const resolvedId = this.requestId;
+            const resolveRequest = this.resolveRequest;
+            const confirmAction = this.confirmAction;
+            const cancelAction = this.cancelAction;
 
             this.isOpen = false;
             this.requestId = null;
-            this.release();
+            this.resolveRequest = null;
+            this.confirmAction = null;
+            this.cancelAction = null;
+
+            try {
+                if (confirmed) {
+                    confirmAction?.();
+                } else {
+                    cancelAction?.();
+                }
+            } finally {
+                resolveRequest?.({
+                    id: resolvedId,
+                    confirmed,
+                });
+            }
 
             dispatchFeedbackEvent('modal-response', {
                 id: resolvedId,
                 confirmed,
             });
+
+            this.release();
         },
 
         /**
@@ -785,13 +844,13 @@ export function appSystemModal() {
 
             if (event.shiftKey && activeElement === first) {
                 event.preventDefault();
-                last.focus();
+                focusElement(last);
                 return;
             }
 
             if (!event.shiftKey && activeElement === last) {
                 event.preventDefault();
-                first.focus();
+                focusElement(first);
             }
         },
 
@@ -837,31 +896,17 @@ function interceptConfirmableFormSubmit(event) {
     event.stopImmediatePropagation();
 
     const submitter = event.submitter instanceof HTMLElement ? event.submitter : null;
-
-    appConfirm({
+    dispatchFeedbackEvent('open-modal', {
+        id: nextSystemModalId(),
+        type: 'confirm',
         title: String(form.dataset.confirmTitle ?? 'Please confirm'),
         message,
-        confirmLabel: form.dataset.confirmLabel,
-        cancelLabel: form.dataset.cancelLabel,
+        confirmLabel: String(form.dataset.confirmLabel ?? 'Confirm'),
+        cancelLabel: String(form.dataset.cancelLabel ?? 'Cancel'),
         confirmVariant: form.dataset.confirmVariant === 'danger' ? 'danger' : 'primary',
-    }).then((confirmed) => {
-        if (!confirmed) {
-            return;
-        }
-
-        if (typeof form.requestSubmit === 'function') {
-            form.dataset[CONFIRM_APPROVED_FLAG] = 'true';
-
-            if (submitter) {
-                form.requestSubmit(submitter);
-                return;
-            }
-
-            form.requestSubmit();
-            return;
-        }
-
-        HTMLFormElement.prototype.submit.call(form);
+        onConfirm: () => {
+            submitConfirmedForm(form, submitter);
+        },
     });
 }
 

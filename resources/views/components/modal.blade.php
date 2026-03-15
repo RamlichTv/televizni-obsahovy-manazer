@@ -32,7 +32,7 @@
     <div
         x-data="appSystemModal()"
         x-init="init()"
-        x-on:keydown.escape.window="isOpen && isTopModal() ? cancel() : null"
+        x-on:keydown.escape.window="isOpen && isTopModal() ? cancelModal() : null"
         x-on:keydown.tab.window="handleTab($event)"
         x-cloak
         class="pointer-events-none fixed inset-0 z-[70]"
@@ -47,7 +47,7 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="pointer-events-auto fixed inset-0 bg-gray-900/40 backdrop-blur-[1px]"
-            @click="isTopModal() ? cancel() : null"
+            @click="isTopModal() ? cancelModal() : null"
         ></div>
 
         {{-- System dialog panel for promise-based alert / confirm interactions. --}}
@@ -78,7 +78,7 @@
                             <button
                                 type="button"
                                 class="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
-                                @click="cancel()"
+                                @click="cancelModal()"
                             >
                                 <span class="sr-only">{{ __('Close dialog') }}</span>
                                 <x-icon name="x" class="h-4 w-4" />
@@ -93,7 +93,7 @@
                             x-cloak
                             type="button"
                             class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#5EB4EE] focus:ring-offset-2"
-                            @click="cancel()"
+                            @click="cancelModal()"
                         >
                             <span x-text="cancelLabel"></span>
                         </button>
@@ -103,7 +103,7 @@
                             x-ref="confirmButton"
                             type="button"
                             :class="confirmButtonClasses()"
-                            @click="confirm()"
+                            @click="confirmModal()"
                         >
                             <span x-text="confirmLabel"></span>
                         </button>
@@ -116,7 +116,7 @@
     <div
         x-data="appNamedModal({ name: @js($name), show: @js($show) })"
         x-init="init()"
-        x-on:keydown.escape.window="show && isTopModal() ? close() : null"
+        x-on:keydown.escape.window="show && isTopModal() ? closeModal() : null"
         x-on:keydown.tab.window="handleTab($event)"
         x-cloak
         class="pointer-events-none fixed inset-0 z-50"
@@ -131,7 +131,7 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="pointer-events-auto fixed inset-0 bg-gray-900/35 backdrop-blur-[1px]"
-            @click="isTopModal() ? close() : null"
+            @click="isTopModal() ? closeModal() : null"
         ></div>
 
         {{-- Named modal dialog shell shared by the content and screen manager overlays. --}}
