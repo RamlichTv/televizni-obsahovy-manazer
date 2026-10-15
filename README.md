@@ -419,7 +419,3 @@ routes/
 - Disable debug in production (`APP_DEBUG=false`).
 - Restrict write permissions on storage and environment files.
 - Run queue workers and scheduler under process supervision in production.
-
-## License
-
-No explicit project license file is included in this repository. Treat usage/distribution as internal unless your organization defines otherwise.
